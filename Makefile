@@ -1,15 +1,15 @@
 .PHONY: all run quick data lint fmt test clean
 
-# Full reproduction: pull data if needed, run all three methods with a
-# bootstrap CI on the ML estimate, write tables and figures.
+# Full reproduction: pull data if needed, run all three methods, write tables
+# and figures. The ML models are seeded, so this is deterministic.
 all: run
 
 run:
-	uv run python run.py --bootstrap 12
-
-# Faster run without the bootstrap CI.
-quick:
 	uv run python run.py
+
+# Add the optional (biased, diagnostic-only) bootstrap CI on the ML estimate.
+boot:
+	uv run python run.py --bootstrap 12
 
 # Pull and cache the raw data only.
 data:

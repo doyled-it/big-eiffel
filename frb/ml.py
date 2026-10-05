@@ -40,6 +40,7 @@ LGB_PARAMS = dict(
     subsample=0.8,
     subsample_freq=1,
     colsample_bytree=0.9,
+    random_state=0,
     n_jobs=-1,
     verbosity=-1,
 )
@@ -326,20 +327,33 @@ def bat_tracking_estimate(
     )
 
 
+# P(clear 344) depends only on the upper quantiles (344 ft is above the median),
+# and each quantile model is independent, so fitting just these at the same
+# settings as the point estimate gives an interval consistent with it.
+BOOT_QUANTILES = [0.5, 0.75, 0.8, 0.85, 0.9, 0.95]
+
+
 def _bootstrap_pclear(df_model, descent_deg, wall_penalty, wall_park, residual, interp, B=10, seed=0):
-    """Bootstrap interval for P(clear 344) under the direct model."""
+    """Bootstrap interval for P(clear 344) under the direct model (optional).
+
+    Caveat: a bootstrap resample holds only about 63% unique rows, so in the
+    sparse high-launch-angle tail the quantile models regress slightly toward
+    center and this biases a tail probability like P(clear 344) low. It is kept
+    as a diagnostic, not the headline interval. The honest uncertainty on the ML
+    estimate is better read from the spread across the three methods, which
+    matches the empirical Wilson interval.
+    """
     rng = np.random.default_rng(seed)
     y_all = df_model["hit_distance_sc"].to_numpy(float)
     cats = df_model["home_team"].cat.categories
     fr = france_row(cats)
     n = len(df_model)
     ps = []
-    quantiles = [0.5, 0.75, 0.8, 0.85, 0.9, 0.95]
     for _ in range(B):
         idx = rng.integers(0, n, n)
         Xb = df_model.iloc[idx][FEATURES]
         yb = y_all[idx]
-        models = train_quantiles(Xb, yb, quantiles=quantiles)
+        models = train_quantiles(Xb, yb, quantiles=BOOT_QUANTILES)
         qvals = {q: float(v[0]) for q, v in predict_quantiles(models, fr).items()}
         qs = sorted(qvals)
         ps.append(p_at_least(qs, [qvals[q] for q in qs], C.FENCE_FT))
