@@ -1,0 +1,17 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+.ruff_cache/
+.pytest_cache/
+.ipynb_checkpoints/
+
+# Large cached data (committed: the small sample + aggregated outputs)
+data/*.parquet
+!data/batted_balls_sample.parquet
+
+# Transient logs
+outputs/*_log.txt
+
+# OS
+.DS_Store
