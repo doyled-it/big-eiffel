@@ -4,7 +4,7 @@
 
 In Game 1 of the 2026 NLDS in Milwaukee, with the roof closed, Ty France hit a
 ball 105.3 mph at a 49 degree launch angle down the left-field line. It struck a
-roof support cable near its apex and was caught on the warning track. This repo
+roof support cable near its apex and was caught in left field. This repo
 estimates, three independent ways, the probability that the same ball would have
 carried over the 344 ft left-field fence had the cable not been there.
 
@@ -13,23 +13,32 @@ carried over the 344 ft left-field fence had the cable not been there.
 The ball most likely would not have gone out, but it was far from hopeless.
 
 - **Expected carry was about 318 to 320 ft**, roughly 25 ft short of the 344 ft
-  fence. The empirical mean is 320 ft, the physics model gives 318 ft, and the
-  ML models give 316 to 323 ft.
+  fence. The empirical mean is 319 ft, the physics model gives 318 ft, and the
+  ML models give 320 to 321 ft.
 - There was about a **1-in-8 chance (11.8%, plausibly 9 to 16%)** of carrying
-  the raw 344 ft on the ground, measured directly from 279 regular-season and postseason balls hit at the
+  the raw 344 ft on the ground, measured directly from 280 regular-season and postseason balls hit at the
   same speed and angle over 2015 to 2026. The physics model, now fit to each
   ball's actual air density, independently agrees at 10.9%.
-- Across methods the raw number spans about 6 to 14%. The two most directly
+- Across methods the raw number spans about 5 to 14%. The two most directly
   grounded estimators, the empirical pool (11.8%) and the physics model (10.9%),
-  land near 12%; the machine-learning models, which condition on the exact dome air, sit lower at around 5 to 8%.
+  land near 12%; the machine-learning models, which condition on the exact dome
+  air, sit lower, 5 to 7%, with the bat-tracking model that also sees France's
+  real swing at about 8.5%.
 - That falls to roughly **5 to 7%** once you also require the ball to clear the
   8 ft wall while staying fair, rather than just reach the fence distance along
-  the ground. The empirical estimate there is 6.6% (Wilson 4 to 10%).
-- Central carry clusters at 316 to 323 ft and the clear probability is
+  the ground. The empirical estimate there is 6.4% (Wilson 4 to 10%).
+- Central carry clusters at 318 to 321 ft and the clear probability is
   single-digit to low-teens percent across the board.
-- The single biggest source of uncertainty is **backspin**, which the public
-  Statcast feed does not measure. So the honest output is a distribution over
-  carry, and the probability comes from its upper tail.
+- **We found the actual swing.** Statcast bat tracking has France's contact: a
+  75.8 mph barrel on a 21.9 degree uppercut, which undercut the ball by about 27
+  degrees and put an estimated 1,600 to 2,600 rpm of backspin on it. Fed that
+  real swing rather than a league-typical one, the bat-tracking model lands 320
+  ft and reaches 344 about 8.5% of the time, a touch more than a typical swing,
+  because a steeper swing to the same 49 degrees means slightly less backspin.
+- Backspin is still not measured directly (the public Statcast feed does not
+  publish batted-ball spin), but for this ball the measured swing bounds it and
+  the bat-tracking model conditions on the real contact. The honest output
+  remains a distribution over carry, with the probability from its upper tail.
 
 In one line: most likely a long out, with a real minority chance it was a home
 run, and the number is low but not zero.
@@ -117,7 +126,7 @@ angle: a low, physical lift coefficient, and a drag multiplier that rises at
 steep angles where a ball loses more to the air than a fixed drag coefficient
 predicts. They are fit across exit velocity, launch angle, and air density (see
 below), so the coefficients are free of the park and weather mix. A single pair
-of smooth curves fits the whole mean-carry surface to **2.66 ft RMSE** and
+of smooth curves fits the whole mean-carry surface to **2.65 ft RMSE** and
 tracks the carry-vs-launch-angle curve across its entire range, with no
 transition artifact, reproducing the ~402 ft peak near 30 degrees.
 
@@ -149,16 +158,41 @@ tabular data), built two ways:
   and lets the trees learn the park, spray, era, and conditions corrections.
 
 A 2024+ variant adds the bat-tracking fields (attack angle, swing path tilt, bat
-speed, swing length) as a partial spin proxy. All models are checked for
-interval calibration on a time-based holdout: the nominal 89, 80, and 50 percent
-intervals cover about 89, 79, and 49 percent of held-out carries, so the
-predicted distributions are honest.
+speed, swing length) and is evaluated at France's **actual measured swing** (see
+below), not a league-typical one. All models are checked for interval calibration
+on a time-based holdout: the nominal 89, 80, and 50 percent intervals cover about
+89, 79, and 49 percent of held-out carries, so the predicted distributions are
+honest.
+
+### The swing and the spin
+
+Statcast never publishes a batted ball's spin, but since 2023 it has tracked the
+bat, and France's swing is on record (`game_pk` 849830): a **75.8 mph** barrel on
+a **21.9 degree** uppercut, against a 98.9 mph fastball. The ball left at 49
+degrees, so the bat undercut it by about **27 degrees**, a backspin-heavy contact.
+`frb/spin.py` turns that into two readings:
+
+- **A collision estimate.** Decomposing the bat-ball relative velocity along and
+  across the launch direction (Nathan's ball-bat collision framework), the
+  across-direction component drives the spin. The full-grip rolling limit is a
+  hard ceiling (~8,700 rpm); real contacts slide and reach a fraction of it, which
+  puts this ball at roughly **1,600 to 2,600 rpm** of backspin. It is a bounded
+  estimate, not a measurement.
+- **An empirical reading.** Among 2024+ balls at the same exit velocity and launch
+  angle, carry rises about **1.5 ft per degree** of attack angle. A steeper swing
+  to the same launch means less undercut, so less of the backspin that fights a
+  steeply climbing ball. France's 21.9 degree attack is above the comparable
+  median (18.7 degrees), so his real swing actually nudges the estimate up, not
+  down: the bat-tracking model lands 320 ft (vs 317 ft for a typical swing) and
+  reaches 344 about 8.5% of the time. The big uppercut is simply how a ball gets
+  to 49 degrees; it did not cost him distance. The 49 degree launch itself is why
+  it lands short.
 
 ## The air it was hit in
 
 Every ball is joined to the conditions it was hit in. Per-game roof state and
 field-relative wind ("8 mph, Out To CF") come from the MLB StatsAPI across
-28,187 games, along with each venue's elevation and orientation. Hourly humidity
+28,686 games, along with each venue's elevation and orientation. Hourly humidity
 and pressure come from the Open-Meteo reanalysis archive at each park, matched to
 the game hour. From these, every ball gets a true **air density** (mean about
 1.17 kg/m^3, from 0.99 at Coors Field down to about 1.26 in cold sea-level air)
@@ -176,12 +210,12 @@ density**: altitude alone would have made it a home run. See
 
 **Wind, measured instead of guessed.** Regressing the carry residual on the
 along-flight wind over 150,000 open-air balls, Statcast's projected carry moves
-only **0.18 ft per mph of reported tailwind** (standard error 0.01), far below
+only **0.19 ft per mph of reported tailwind** (standard error 0.01), far below
 the ~3 ft per mph a ball feeling the full wind would show. The projected
 distance is largely wind-neutralized, which means wind is not a hidden confound
 in this analysis, and the closed-roof ball had no wind anyway.
 
-The full enriched dataset (2.49M balls, 27 columns) is published at
+The full enriched dataset (2.52M balls, 27 columns) is published at
 [`doyled-it/statcast-batted-balls-weather`](https://huggingface.co/datasets/doyled-it/statcast-batted-balls-weather).
 
 ## Results
@@ -194,25 +228,26 @@ empirical counts.
 
 | method | central carry (ft) | generic 344 raw | generic 344 + 8ft wall | Milwaukee park raw | Milwaukee park + 8ft wall |
 |---|---|---|---|---|---|
-| Method 1 empirical (2015-2026 pool, n=279) | 319 | 11.8% [8.5, 16.1] | 8.6% [5.8, 12.5] | 8.6% [5.8, 12.5] | 6.5% [4.1, 10.0] |
-| Method 1 kernel (sigma 1.5) | 320 | 14.2% | | | |
-| Method 2 physics (sensitivity MC) | 318 | 10.9% | 8.1% | 7.5% | 5.9% |
-| Method 3 ML direct | 323 | 5.9% | 5.0% | 5.0% | 5.0% |
-| Method 3 ML physics-residual | 322 | 5.0% | 5.0% | 5.0% | 5.0% |
-| Method 3 ML + bat-tracking (2024+) | 316 | 8.4% | 7.5% | 7.3% | 6.4% |
+| Method 1 empirical (2015-2026 pool, n=280) | 319 | 11.8% [8.5, 16.1] | 8.6% [5.8, 12.4] | 8.6% [5.8, 12.4] | 6.4% [4.1, 9.9] |
+| Method 1 kernel (sigma 1.5) | 320 | 14.1% | | | |
+| Method 2 physics (sensitivity MC) | 318 | 10.9% | 8.0% | 7.5% | 5.9% |
+| Method 3 ML direct | 321 | 6.6% | 5.7% | 5.5% | 5.0% |
+| Method 3 ML physics-residual | 321 | 5.0% | 5.0% | 5.0% | 5.0% |
+| Method 3 ML + bat-tracking (2024+, real swing) | 320 | 8.5% | 7.6% | 7.4% | 6.5% |
 
 The physics central carry (318 ft) is the dome point estimate; its four
-probabilities come from the temperature-and-spin Monte Carlo sweep.
+probabilities come from the temperature-and-spin Monte Carlo sweep. The
+bat-tracking row now uses France's measured swing (see below), not a typical one.
 
 At the France spray angle the wall is 348 ft, four feet deeper than the 344 ft
-foul-line minimum. So reaching the Milwaukee wall on the ground (8.8%) is a
+foul-line minimum. So reaching the Milwaukee wall on the ground (8.6%) is a
 little harder than reaching a flat 344 ft (11.8%), and clearing the 8 ft wall
-there brings it to 6.6%. The machine-learning uncertainty is best read as the
+there brings it to 6.4%. The machine-learning uncertainty is best read as the
 spread across the methods; a naive bootstrap would understate it, since
 resampling thins the sparse high-angle tail.
 
-Reading across methods, the central carry clusters at 316 to 323 ft and the raw
-P(reach 344) spans about 6 to 14%. The empirical pool (11.8%) and the physics
+Reading across methods, the central carry clusters at 318 to 321 ft and the raw
+P(reach 344) spans about 5 to 14%. The empirical pool (11.8%) and the physics
 model (10.9%), the two estimators grounded directly in the ball's real
 conditions, land near 12%; the machine-learning models sit a few points lower.
 
@@ -220,10 +255,13 @@ conditions, land near 12%; the machine-learning models sit a few points lower.
 
 All saved to `figures/`:
 
+- `trajectory_profile.png`: the headline figure. A to-scale side view from home
+  plate of the model's free-flight arc at the dome's air, the 344 ft / 8 ft wall,
+  the roof cable marked near the apex, a plausibility band, and the cut-short path.
 - `carry_vs_launch_angle.png`: empirical mean carry against the fitted physics
   curve, which now tracks the data across the whole range, peak near 30 degrees
   through the steep decline past 45.
-- `france_carry_distribution.png`: the carry distribution of the 279 comparable
+- `france_carry_distribution.png`: the carry distribution of the 280 comparable
   balls, with the 344 ft line and the cleared fraction marked.
 - `ml_predictive_distribution.png`: the LightGBM predictive carry CDF at the
   France input, with P(carry >= 344) read off the tail.
@@ -234,12 +272,14 @@ All saved to `figures/`:
 
 ## Limitations
 
-1. **No measured spin (the dominant one).** Public Statcast gives no batted-ball
-   backspin or sidespin. Backspin is what turns a given launch into more or less
-   carry, and at a 49 degree launch it can push the ball back on the long ascent.
-   This is why the output is a distribution, not a point, and why the methods
-   disagree by a few points. The bat-tracking fields are only a weak proxy and
-   only exist from 2024.
+1. **Backspin is estimated, not measured (the dominant one).** Public Statcast
+   gives no batted-ball backspin or sidespin. Backspin is what turns a given
+   launch into more or less carry, and at a 49 degree launch it can push the ball
+   back on the long ascent. For this ball the measured swing lets us bound it
+   (about 1,600 to 2,600 rpm from the collision geometry) and the bat-tracking
+   model conditions on the real contact, but a bound is not a measurement. This is
+   why the output is still a distribution, not a point, and why the methods
+   disagree by a few points. Bat tracking also only exists from 2024 on.
 2. **Statcast hit distance is a projection.** `hit_distance_sc` is Statcast's
    modeled flight distance, not a surveyed landing point, and carries its own
    error. The wind analysis suggests it is also largely wind-neutralized.
@@ -300,7 +340,8 @@ frb/
   empirical.py   Method 1: pooling and the Gaussian-kernel estimate
   physics.py     Method 2: the density-aware drag-plus-Magnus model, wind learning
   ml.py          Method 3: physics-informed quantile regression
-  plots.py       the five figures
+  spin.py        backspin from the measured swing (collision + empirical slope)
+  plots.py       the six figures
   report.py      the cross-method results table
   stats_utils.py Wilson interval, weighted quantile
 run.py           single entry point that reproduces everything
