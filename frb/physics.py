@@ -1,21 +1,21 @@
 """Method 2: a calibrated drag-plus-Magnus trajectory model.
 
-A quadratic-drag, Magnus-lift point-mass integrator. The drag coefficient is
-fixed; an effective lift coefficient is fit as a smooth function of launch
-angle so the model reproduces the empirical mean-carry surface in average MLB
-conditions (not calibrated at a single point). The fitted model is then
-evaluated at the France profile under closed-roof dome conditions, with a
-sensitivity sweep over temperature and over a plausible (unmeasured) spin
-range.
+A quadratic-drag, Magnus-lift point-mass integrator. Two effective coefficients
+are fit as smooth functions of launch angle so the model reproduces the
+empirical mean-carry surface in average MLB conditions (not calibrated at a
+single point):
 
-A note on the effective lift coefficient. Below the distance-optimal launch
-angle (~30 deg) more backspin lift means more carry, so the fit lands on a
-low, physical Cl. Above it the Magnus force points increasingly backward on
-the long steep ascent, so more lift means less carry, and reproducing the
-short empirical carry of steeply hit balls requires a larger effective Cl.
-The constant-drag model structurally overshoots high-angle carry, so the
-high-angle effective Cl absorbs that deficit. It is an effective parameter,
-not a measured spin.
+- an effective lift coefficient Cl(LA), kept low and physical, and
+- an effective drag multiplier kd(LA) on the base drag coefficient.
+
+A lift-only, constant-drag model reproduces carry up to about 35 degrees but
+structurally overshoots the steep 36 to 44 degree descent regime, where a ball
+loses more to the air than a fixed drag coefficient predicts. The effective
+drag multiplier absorbs that deficit smoothly, so the lift coefficient stays in
+a realistic backspin range and the carry-vs-launch-angle curve matches the data
+across the whole range (RMSE about 3 ft). The fitted model is then evaluated at
+the France profile under closed-roof dome conditions, with a sensitivity sweep
+over temperature and over a plausible (unmeasured) spin range.
 """
 
 from __future__ import annotations
@@ -68,7 +68,14 @@ class Trajectory:
 
 
 def carry(
-    ev_mph: float, la_deg: float, cl: float, rho_: float, z0: float = C.LAUNCH_HEIGHT_M, dt: float = 0.001
+    ev_mph: float,
+    la_deg: float,
+    cl: float,
+    rho_: float,
+    cd: float = C.CD,
+    wind_mph: float = 0.0,
+    z0: float = C.LAUNCH_HEIGHT_M,
+    dt: float = 0.001,
 ) -> float:
     """Carry distance in feet (fast path, no trajectory stored).
 
@@ -77,14 +84,17 @@ def carry(
         la_deg: Launch angle in degrees.
         cl: Effective lift coefficient.
         rho_: Air density in kg/m^3.
+        cd: Effective drag coefficient.
+        wind_mph: Along-flight wind (positive is a tailwind that aids carry).
         z0: Contact height in meters.
         dt: Integration time step in seconds.
 
     Returns:
         Carry (landing) distance in feet.
     """
-    drag = 0.5 * rho_ * C.CD * C.BALL_AREA_M2 / C.BALL_MASS_KG
+    drag = 0.5 * rho_ * cd * C.BALL_AREA_M2 / C.BALL_MASS_KG
     lift = 0.5 * rho_ * cl * C.BALL_AREA_M2 / C.BALL_MASS_KG
+    w = wind_mph * C.MPH_TO_MS
     v = ev_mph * C.MPH_TO_MS
     th = math.radians(la_deg)
     vx = v * math.cos(th)
@@ -96,9 +106,10 @@ def carry(
     g = C.GRAVITY
     for _ in range(200000):
         xp, zp = x, z
-        sp = math.hypot(vx, vz)
-        ax = -drag * sp * vx - lift * sp * vz
-        az = -g - drag * sp * vz + lift * sp * vx
+        svx = vx - w  # airspeed relative to the wind
+        sp = math.hypot(svx, vz)
+        ax = -drag * sp * svx - lift * sp * vz
+        az = -g - drag * sp * vz + lift * sp * svx
         vx += ax * dt
         vz += az * dt
         x += vx * dt
@@ -113,11 +124,71 @@ def carry(
     return x * C.M_TO_FT
 
 
+def carry_vec(
+    ev_mph, la_deg, cl, rho_, cd, dt: float = 0.004, z0: float = C.LAUNCH_HEIGHT_M, max_steps: int = 3000
+) -> np.ndarray:
+    """Vectorized no-wind carry for many points at once (feet).
+
+    Integrates every (EV, LA, Cl, rho, Cd) trajectory together as numpy arrays,
+    stopping each at its own ground crossing. Much faster than looping the
+    scalar integrator, which makes the grid fit tractable.
+
+    Arguments:
+        ev_mph: Exit velocities (array).
+        la_deg: Launch angles in degrees (array).
+        cl: Effective lift coefficients (array).
+        rho_: Air densities (array).
+        cd: Effective drag coefficients (array).
+        dt: Integration time step.
+        z0: Contact height in meters.
+        max_steps: Safety cap on steps.
+
+    Returns:
+        Carry distances in feet (array).
+    """
+    ev = np.asarray(ev_mph, float)
+    th = np.radians(np.asarray(la_deg, float))
+    drag = 0.5 * np.asarray(rho_, float) * np.asarray(cd, float) * C.BALL_AREA_M2 / C.BALL_MASS_KG
+    lift = 0.5 * np.asarray(rho_, float) * np.asarray(cl, float) * C.BALL_AREA_M2 / C.BALL_MASS_KG
+    v = ev * C.MPH_TO_MS
+    vx = v * np.cos(th)
+    vz = v * np.sin(th)
+    n = ev.shape[0]
+    x = np.zeros(n)
+    z = np.full(n, z0)
+    rng = np.zeros(n)
+    landed = np.zeros(n, dtype=bool)
+    g = C.GRAVITY
+    for _ in range(max_steps):
+        active = ~landed
+        if not active.any():
+            break
+        sp = np.hypot(vx, vz)
+        ax = -drag * sp * vx - lift * sp * vz
+        az = -g - drag * sp * vz + lift * sp * vx
+        xp, zp = x.copy(), z.copy()
+        vx = np.where(active, vx + ax * dt, vx)
+        vz = np.where(active, vz + az * dt, vz)
+        x = np.where(active, x + vx * dt, x)
+        z = np.where(active, z + vz * dt, z)
+        newly = active & (z <= 0)
+        if newly.any():
+            denom = zp[newly] - z[newly]
+            frac = np.where(denom != 0, zp[newly] / denom, 1.0)
+            rng[newly] = (xp[newly] + frac * (x[newly] - xp[newly])) * C.M_TO_FT
+            landed |= newly
+    still = ~landed
+    rng[still] = x[still] * C.M_TO_FT
+    return rng
+
+
 def integrate(
     ev_mph: float,
     la_deg: float,
     cl: float,
     rho_: float,
+    cd: float = C.CD,
+    wind_mph: float = 0.0,
     z0: float = C.LAUNCH_HEIGHT_M,
     dt: float = 0.001,
 ) -> Trajectory:
@@ -128,14 +199,17 @@ def integrate(
         la_deg: Launch angle in degrees.
         cl: Effective lift coefficient.
         rho_: Air density in kg/m^3.
+        cd: Effective drag coefficient.
+        wind_mph: Along-flight wind (positive is a tailwind that aids carry).
         z0: Contact height in meters.
         dt: Integration time step in seconds.
 
     Returns:
         A :class:`Trajectory` (distances and heights in feet).
     """
-    drag = 0.5 * rho_ * C.CD * C.BALL_AREA_M2 / C.BALL_MASS_KG
+    drag = 0.5 * rho_ * cd * C.BALL_AREA_M2 / C.BALL_MASS_KG
     lift = 0.5 * rho_ * cl * C.BALL_AREA_M2 / C.BALL_MASS_KG
+    w = wind_mph * C.MPH_TO_MS
     v = ev_mph * C.MPH_TO_MS
     th = np.radians(la_deg)
     vx = v * np.cos(th)
@@ -143,9 +217,10 @@ def integrate(
     x, z, t = 0.0, z0, 0.0
     xs, zs = [x], [z]
     for _ in range(200000):
-        sp = np.hypot(vx, vz)
-        ax = -drag * sp * vx - lift * sp * vz
-        az = -C.GRAVITY - drag * sp * vz + lift * sp * vx
+        svx = vx - w
+        sp = np.hypot(svx, vz)
+        ax = -drag * sp * svx - lift * sp * vz
+        az = -C.GRAVITY - drag * sp * vz + lift * sp * svx
         vx += ax * dt
         vz += az * dt
         x += vx * dt
@@ -171,7 +246,7 @@ def integrate(
 
 
 # --------------------------------------------------------------------------
-# Calibrating the effective lift against the empirical mean-carry surface
+# Calibrating the effective coefficients against the mean-carry surface
 # --------------------------------------------------------------------------
 
 CL_KNOTS_LA = np.array([10.0, 14.0, 18.0, 22.0, 26.0, 30.0, 34.0, 38.0, 42.0, 46.0, 50.0])
@@ -179,32 +254,43 @@ CL_KNOTS_LA = np.array([10.0, 14.0, 18.0, 22.0, 26.0, 30.0, 34.0, 38.0, 42.0, 46
 
 @dataclass
 class LiftFit:
-    """A fitted effective-lift-vs-launch-angle model."""
+    """A fitted effective-lift and effective-drag model (functions of LA)."""
 
     knot_la: np.ndarray
     knot_cl: np.ndarray
-    rho_fit: float
+    knot_kd: np.ndarray  # drag multiplier on the base CD
+    rho_fit: float  # pool mean air density (density-aware fit) or MLB baseline
     grid_pts: np.ndarray
     grid_obs: np.ndarray
     grid_model: np.ndarray
     grid_n: np.ndarray
+    grid_rho: np.ndarray = None  # per-bin air density (density-aware fit)
+    density_aware: bool = False
 
-    def _interp(self) -> PchipInterpolator:
+    def _cl_interp(self) -> PchipInterpolator:
         return PchipInterpolator(self.knot_la, self.knot_cl, extrapolate=True)
+
+    def _kd_interp(self) -> PchipInterpolator:
+        return PchipInterpolator(self.knot_la, self.knot_kd, extrapolate=True)
 
     def cl(self, la_deg: float | np.ndarray) -> np.ndarray:
         """Effective lift coefficient at a launch angle (clamped to knot range)."""
         la = np.clip(np.asarray(la_deg, dtype=float), self.knot_la.min(), self.knot_la.max())
-        return self._interp()(la)
+        return self._cl_interp()(la)
+
+    def kd(self, la_deg: float | np.ndarray) -> np.ndarray:
+        """Effective drag multiplier at a launch angle (clamped to knot range)."""
+        la = np.clip(np.asarray(la_deg, dtype=float), self.knot_la.min(), self.knot_la.max())
+        return self._kd_interp()(la)
+
+    def cd(self, la_deg: float | np.ndarray) -> np.ndarray:
+        """Effective drag coefficient = base CD times the fitted multiplier."""
+        return C.CD * self.kd(la_deg)
 
     def rmse(self) -> float:
         """Count-weighted RMSE of model vs empirical mean carry over the grid."""
         w = self.grid_n / self.grid_n.sum()
         return float(np.sqrt(np.sum(w * (self.grid_model - self.grid_obs) ** 2)))
-
-
-GRID_EV_CENTERS = np.arange(92, 112, 3.0)
-GRID_LA_CENTERS = np.arange(10, 51, 2.0)
 
 
 def mean_carry_grid(
@@ -245,29 +331,75 @@ def mean_carry_grid(
     return np.array(pts), np.array(means), np.array(counts)
 
 
-def fit_lift_curve(df, smooth: float = 1.0e4, dt: float = 0.004) -> LiftFit:
-    """Fit a smooth effective Cl(LA) to the empirical mean-carry surface.
+GRID_EV_CENTERS = np.arange(92, 112, 3.0)
+GRID_LA_CENTERS = np.arange(10, 51, 2.0)
+# Air-density bin edges for the density-aware fit (thin Coors air through dense cold air).
+GRID_RHO_EDGES = np.array([1.00, 1.10, 1.16, 1.20, 1.30])
 
-    The lift coefficient is parameterized by its value at a set of launch-angle
-    knots. Those values are optimized jointly to minimize the squared error
-    between model carry and empirical mean carry across the whole grid, with a
-    light curvature penalty for smoothness. Each grid bin is weighted equally
-    (every bin has at least ``min_n`` balls), so the sparse high-launch-angle
-    region that the France profile lives in is fit as well as the dense core,
-    rather than being swamped by the high-count bins near the distance peak.
-    Fitting is done in average-MLB atmosphere.
+# Fit bounds and priors.
+CL_BOUNDS = (0.05, 0.28)  # realistic backspin-lift range
+KD_BOUNDS = (0.9, 2.2)  # drag multiplier on base CD
 
-    Note on scope: a constant-drag lift-only model reproduces carry well up to
-    about 35 deg (including the ~405 ft peak near 30 deg) but structurally
-    overshoots the steep 36-44 deg descent regime, where carry-vs-lift is
-    non-monotone and the effective lift is poorly identified. The France
-    profile (49 deg) sits in that hard regime, so the physics point there
-    carries extra model uncertainty and is treated as a cross-check, not the
-    primary estimate.
+
+def mean_carry_grid_rho(df, ev_centers=None, la_centers=None, half_ev=1.5, half_la=1.5, min_n=30):
+    """Empirical mean carry on an (EV, LA, air-density) grid.
+
+    Binning by air density as well as launch conditions lets the fit separate
+    the aerodynamic coefficients from the park-and-weather mix, since a thin-air
+    (Coors) bin and a dense-air bin at the same EV and LA must be matched by the
+    same coefficients at their own densities.
+
+    Arguments:
+        df: Batted-ball table with an ``air_density`` column.
+        ev_centers: Exit-velocity bin centers.
+        la_centers: Launch-angle bin centers.
+        half_ev: Half-width of each EV bin.
+        half_la: Half-width of each LA bin.
+        min_n: Minimum count for a bin to be used.
+
+    Returns:
+        (ev, la, rho, mean_carry, counts) arrays.
+    """
+    ev_centers = GRID_EV_CENTERS if ev_centers is None else ev_centers
+    la_centers = GRID_LA_CENTERS if la_centers is None else la_centers
+    ev = df.launch_speed.to_numpy(float)
+    la = df.launch_angle.to_numpy(float)
+    d = df.hit_distance_sc.to_numpy(float)
+    rho_ = df.air_density.to_numpy(float)
+    ok = np.isfinite(rho_)
+    rows = []
+    for e in ev_centers:
+        for a in la_centers:
+            base = ok & (np.abs(ev - e) <= half_ev) & (np.abs(la - a) <= half_la)
+            for i in range(len(GRID_RHO_EDGES) - 1):
+                lo, hi = GRID_RHO_EDGES[i], GRID_RHO_EDGES[i + 1]
+                m = base & (rho_ >= lo) & (rho_ < hi)
+                n = int(m.sum())
+                if n >= min_n:
+                    rows.append((e, a, float(rho_[m].mean()), float(d[m].mean()), n))
+    arr = np.array(rows)
+    return arr[:, 0], arr[:, 1], arr[:, 2], arr[:, 3], arr[:, 4]
+
+
+def fit_lift_curve(df, smooth_cl: float = 2.0e4, smooth_kd: float = 6.0e6, dt: float = 0.004) -> LiftFit:
+    """Fit smooth effective Cl(LA) and drag kd(LA) to the mean-carry surface.
+
+    Both coefficients are parameterized by their values at launch-angle knots
+    and optimized jointly to minimize the count-weighted squared error between
+    model carry and empirical mean carry, with curvature penalties for
+    smoothness and a gentle prior that the drag multiplier stays at least one.
+    The lift is bounded to a realistic range so the drag multiplier, not an
+    unphysical lift, carries the high-angle correction.
+
+    When the table has per-ball air density (the weather-enriched pool), the fit
+    is density aware: it bins by (EV, LA, density) and evaluates the model at
+    each bin's own density, so the coefficients are free of the altitude and
+    weather mix. Otherwise it fits at an average-MLB atmosphere.
 
     Arguments:
         df: Batted-ball table.
-        smooth: Curvature penalty weight (larger is smoother).
+        smooth_cl: Curvature penalty for the lift curve.
+        smooth_kd: Curvature penalty for the drag curve.
         dt: Integration step used during fitting (coarser for speed).
 
     Returns:
@@ -275,44 +407,56 @@ def fit_lift_curve(df, smooth: float = 1.0e4, dt: float = 0.004) -> LiftFit:
     """
     from scipy.optimize import minimize
 
-    rho_fit = rho(C.MLB_TEMP_F, C.MLB_ELEV_M, C.MLB_RH)
-    pts, obs, counts = mean_carry_grid(df)
-    evs = pts[:, 0]
-    las = pts[:, 1]
-    w = np.ones_like(counts, dtype=float)
+    density_aware = "air_density" in df.columns and bool(df["air_density"].notna().any())
+    if density_aware:
+        evs, las, rhos, obs, counts = mean_carry_grid_rho(df)
+        rho_ref = float(np.average(rhos, weights=counts))
+    else:
+        rho_ref = rho(C.MLB_TEMP_F, C.MLB_ELEV_M, C.MLB_RH)
+        pts, obs, counts = mean_carry_grid(df)
+        evs, las = pts[:, 0], pts[:, 1]
+        rhos = np.full_like(evs, rho_ref)
+    w = np.sqrt(counts.astype(float))
+    nk = CL_KNOTS_LA.size
 
-    def model_carry(knot_cl):
-        interp = PchipInterpolator(CL_KNOTS_LA, knot_cl, extrapolate=True)
-        cls = interp(las)
-        return np.array([carry(e, a, max(cl, 0.0), rho_fit, dt=dt) for e, a, cl in zip(evs, las, cls)])
+    def model_carry(params, step):
+        cl_k, kd_k = params[:nk], params[nk:]
+        cli = PchipInterpolator(CL_KNOTS_LA, cl_k, extrapolate=True)
+        kdi = PchipInterpolator(CL_KNOTS_LA, kd_k, extrapolate=True)
+        cls = np.clip(cli(las), 0.0, None)
+        cds = C.CD * np.clip(kdi(las), 0.05, None)
+        return carry_vec(evs, las, cls, rhos, cds, dt=step)
 
-    def objective(knot_cl):
-        model = model_carry(knot_cl)
+    def objective(params):
+        cl_k, kd_k = params[:nk], params[nk:]
+        model = model_carry(params, dt)
         data_term = np.sum(w * (model - obs) ** 2)
-        curv = np.diff(knot_cl, 2)
-        pen = smooth * np.sum(curv**2)
+        pen = smooth_cl * np.sum(np.diff(cl_k, 2) ** 2) + smooth_kd * np.sum(np.diff(kd_k, 2) ** 2)
+        pen += 1.0e5 * np.sum(np.clip(1.0 - kd_k, 0, None) ** 2)  # prefer kd >= 1
         return data_term + pen
 
-    x0 = np.full(CL_KNOTS_LA.size, 0.15)
-    bounds = [(0.02, 0.6)] * CL_KNOTS_LA.size
-    res = minimize(objective, x0, method="L-BFGS-B", bounds=bounds, options={"maxiter": 400, "ftol": 1e-9})
-    knot_cl = res.x
-    # Recompute model carry at the fitted knots with the fit-time dt for reporting.
-    grid_model = model_carry(knot_cl)
+    x0 = np.concatenate([np.full(nk, 0.12), np.full(nk, 1.05)])
+    bounds = [CL_BOUNDS] * nk + [KD_BOUNDS] * nk
+    res = minimize(objective, x0, method="L-BFGS-B", bounds=bounds, options={"maxiter": 500, "ftol": 1e-9})
+    cl_k, kd_k = res.x[:nk], res.x[nk:]
+    grid_model = model_carry(res.x, 0.002)
     return LiftFit(
         knot_la=CL_KNOTS_LA,
-        knot_cl=knot_cl,
-        rho_fit=rho_fit,
-        grid_pts=pts,
+        knot_cl=cl_k,
+        knot_kd=kd_k,
+        rho_fit=rho_ref,
+        grid_pts=np.column_stack([evs, las]),
         grid_obs=obs,
         grid_model=grid_model,
         grid_n=counts,
+        grid_rho=rhos,
+        density_aware=density_aware,
     )
 
 
 def carry_vs_la(ev_mph: float, fit: LiftFit, rho_: float, la_values: np.ndarray, dt: float = 0.001) -> np.ndarray:
     """Model carry across launch angles at a fixed exit velocity."""
-    return np.array([carry(ev_mph, a, float(fit.cl(a)), rho_, dt=dt) for a in la_values])
+    return np.array([carry(ev_mph, a, float(fit.cl(a)), rho_, cd=float(fit.cd(a)), dt=dt) for a in la_values])
 
 
 # --------------------------------------------------------------------------
@@ -327,6 +471,7 @@ class PhysicsPoint:
     ev: float
     la: float
     cl: float
+    cd: float
     temp_f: float
     rho: float
     carry_ft: float
@@ -348,7 +493,7 @@ def evaluate_point(
     """Evaluate the fitted model at a point under given atmosphere.
 
     Arguments:
-        fit: The fitted lift model.
+        fit: The fitted model.
         ev: Exit velocity (mph).
         la: Launch angle (deg).
         temp_f: Temperature (F).
@@ -362,11 +507,13 @@ def evaluate_point(
     """
     rho_ = rho(temp_f, elev_m, rh)
     cl = float(fit.cl(la)) * cl_scale
-    tr = integrate(ev, la, cl, rho_)
+    cd = float(fit.cd(la))
+    tr = integrate(ev, la, cl, rho_, cd=cd)
     return PhysicsPoint(
         ev=ev,
         la=la,
         cl=cl,
+        cd=cd,
         temp_f=temp_f,
         rho=rho_,
         carry_ft=tr.range_ft,
@@ -385,17 +532,22 @@ def sensitivity_mc(
     temp_lo: float = 60.0,
     temp_hi: float = 80.0,
     cl_rel: float = 0.35,
+    spin_sigma_ft: float = 20.0,
     n: int = 4000,
     seed: int = 0,
 ) -> dict:
-    """Crude Monte Carlo carry distribution from temperature and spin uncertainty.
+    """Crude Monte Carlo carry distribution from temperature and spin scatter.
 
-    Temperature is sampled uniformly over a plausible dome range and the
-    effective lift coefficient is scaled by a normal factor whose 2-sigma spans
-    +/- ``cl_rel`` (standing in for the unmeasured backspin).
+    Temperature is sampled uniformly over a plausible dome range. The unmeasured
+    backspin enters two ways: the effective lift is scaled by a normal factor
+    whose 2-sigma spans +/- ``cl_rel``, and because the drag-calibrated model
+    makes lift only a weak lever at a steep launch angle, the dominant per-ball
+    spin scatter is added as Gaussian noise with standard deviation
+    ``spin_sigma_ft``, measured from the carry spread of comparable balls at
+    near-identical conditions. The effective drag is held at its fitted value.
 
     Arguments:
-        fit: The fitted lift model.
+        fit: The fitted model.
         ev: Exit velocity (mph).
         la: Launch angle (deg).
         elev_m: Elevation (m).
@@ -413,18 +565,118 @@ def sensitivity_mc(
     temps = rng.uniform(temp_lo, temp_hi, n)
     cl_scales = rng.normal(1.0, cl_rel / 2.0, n).clip(0.3, 2.0)
     cl0 = float(fit.cl(la))
-    carries = np.empty(n)
-    for i in range(n):
-        rho_ = rho(float(temps[i]), elev_m, rh)
-        tr_cl = cl0 * float(cl_scales[i])
-        carries[i] = carry(ev, la, tr_cl, rho_)
-    base = integrate(ev, la, cl0, rho(float(np.mean([temp_lo, temp_hi])), elev_m, rh))
+    cd0 = float(fit.cd(la))
+    rhos = np.array([rho(float(t), elev_m, rh) for t in temps])
+    carries = carry_vec(np.full(n, ev), np.full(n, la), cl0 * cl_scales, rhos, np.full(n, cd0))
+    carries = carries + rng.normal(0.0, spin_sigma_ft, n)
+    base = integrate(ev, la, cl0, rho(float(np.mean([temp_lo, temp_hi])), elev_m, rh), cd=cd0)
     return {
         "carries": carries,
         "cl0": cl0,
+        "cd0": cd0,
         "mean": float(carries.mean()),
         "median": float(np.median(carries)),
         "p05": float(np.percentile(carries, 5)),
         "p95": float(np.percentile(carries, 95)),
         "descent_deg": base.descent_angle_deg,
+    }
+
+
+# --------------------------------------------------------------------------
+# Learning the wind effect from the data
+# --------------------------------------------------------------------------
+
+
+def _carry_surface(fit: LiftFit, dt: float = 0.003):
+    """A fast (EV, LA, rho) -> no-wind carry interpolator for the fitted model."""
+    from scipy.interpolate import RegularGridInterpolator
+
+    ev_g = np.arange(70.0, 118.0, 2.0)
+    la_g = np.arange(0.0, 60.0, 2.0)
+    rho_g = np.arange(1.00, 1.31, 0.03)
+    EE, AA, RR = np.meshgrid(ev_g, la_g, rho_g, indexing="ij")
+    cl = fit.cl(AA.ravel())
+    cd = fit.cd(AA.ravel())
+    z = carry_vec(EE.ravel(), AA.ravel(), cl, RR.ravel(), cd, dt=dt).reshape(EE.shape)
+    return RegularGridInterpolator((ev_g, la_g, rho_g), z, bounds_error=False, fill_value=None)
+
+
+def learn_wind_effect(
+    df, fit: LiftFit, la_lo: float = 15.0, la_hi: float = 45.0, ev_lo: float = 90.0, max_n: int = 150000, seed: int = 0
+) -> dict:
+    """Empirically measure how much carry responds to wind.
+
+    For open-air balls with meaningful hang time, take the residual between the
+    measured carry and the model's no-wind carry at that ball's exit velocity,
+    launch angle, and air density, then regress it on the along-flight wind. The
+    slope is feet of carry per mph of MLB-reported tailwind. Comparing it to the
+    model's own wind sensitivity (feet per mph of true field wind) recovers the
+    fraction of the reported wind that the ball actually feels at field level.
+
+    Arguments:
+        df: Weather-enriched batted-ball table.
+        fit: The fitted physics model.
+        la_lo: Lowest launch angle to include.
+        la_hi: Highest launch angle to include.
+        ev_lo: Lowest exit velocity to include.
+        max_n: Cap on the regression sample size.
+        seed: RNG seed for subsampling.
+
+    Returns:
+        Dict with the fitted slope, standard error, sample size, the model's
+        field-wind sensitivity, and the implied effective-wind fraction.
+    """
+    need = [
+        "air_density",
+        "wind_along_mph",
+        "roof_closed",
+        "launch_speed",
+        "launch_angle",
+        "hit_distance_sc",
+        "spray_deg",
+    ]
+    if any(c not in df.columns for c in need):
+        return {"available": False}
+    sub = df[
+        (~df["roof_closed"].fillna(False))
+        & df["air_density"].notna()
+        & df["wind_along_mph"].notna()
+        & df["launch_angle"].between(la_lo, la_hi)
+        & (df["launch_speed"] >= ev_lo)
+        & df["spray_deg"].between(-45, 45)
+    ]
+    if len(sub) < 5000:
+        return {"available": False, "n": int(len(sub))}
+    if len(sub) > max_n:
+        sub = sub.sample(n=max_n, random_state=seed)
+
+    surf = _carry_surface(fit)
+    pts = np.column_stack(
+        [sub.launch_speed.to_numpy(float), sub.launch_angle.to_numpy(float), sub.air_density.to_numpy(float)]
+    )
+    model_nowind = surf(pts)
+    resid = sub.hit_distance_sc.to_numpy(float) - model_nowind
+    wind = sub.wind_along_mph.to_numpy(float)
+    good = np.isfinite(resid) & np.isfinite(wind)
+    resid, wind = resid[good], wind[good]
+
+    # Ordinary least squares: resid = a + b * wind.
+    b, a = np.polyfit(wind, resid, 1)
+    yhat = a + b * wind
+    n = wind.size
+    se = float(np.sqrt(np.sum((resid - yhat) ** 2) / (n - 2) / np.sum((wind - wind.mean()) ** 2)))
+
+    # Model's own field-wind sensitivity at a representative fly-ball profile.
+    rr = float(fit.rho_fit)
+    cl28, cd28 = float(fit.cl(28)), float(fit.cd(28))
+    phys = (carry(100, 28, cl28, rr, cd=cd28, wind_mph=5) - carry(100, 28, cl28, rr, cd=cd28, wind_mph=-5)) / 10.0
+
+    return {
+        "available": True,
+        "n": int(n),
+        "slope_ft_per_mph": float(b),
+        "slope_se": se,
+        "intercept_ft": float(a),
+        "model_field_sensitivity_ft_per_mph": float(phys),
+        "effective_wind_fraction": float(b / phys) if phys else float("nan"),
     }
