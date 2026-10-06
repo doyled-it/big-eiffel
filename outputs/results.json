@@ -8,7 +8,7 @@
     "wall_ft": 8.0
   },
   "data": {
-    "n_balls": 2522038,
+    "n_balls": 2522305,
     "year_min": 2015,
     "year_max": 2026,
     "roof_closed_frac": 0.1617,
@@ -35,13 +35,13 @@
     "ev_hi": 106.5,
     "la_lo": 48.0,
     "la_hi": 50.0,
-    "n": 279,
+    "n": 280,
     "mean_carry": 319.2,
     "median_carry": 319.0,
     "k_clear": 33,
-    "frac_clear": 0.1183,
-    "ci_low": 0.0855,
-    "ci_high": 0.1615,
+    "frac_clear": 0.1179,
+    "ci_low": 0.0852,
+    "ci_high": 0.1609,
     "fence_ft": 344.0
   },
   "gate_pass": true,
@@ -52,13 +52,13 @@
       "ev_hi": 106.5,
       "la_lo": 48.0,
       "la_hi": 50.0,
-      "n": 279,
+      "n": 280,
       "mean_carry": 319.2,
       "median_carry": 319.0,
       "k_clear": 33,
-      "frac_clear": 0.1183,
-      "ci_low": 0.0855,
-      "ci_high": 0.1615,
+      "frac_clear": 0.1179,
+      "ci_low": 0.0852,
+      "ci_high": 0.1609,
       "fence_ft": 344.0
     },
     {
@@ -67,13 +67,13 @@
       "ev_hi": 105.8,
       "la_lo": 48.5,
       "la_hi": 49.5,
-      "n": 39,
-      "mean_carry": 320.7,
+      "n": 40,
+      "mean_carry": 320.8,
       "median_carry": 323.0,
       "k_clear": 6,
-      "frac_clear": 0.1538,
-      "ci_low": 0.0725,
-      "ci_high": 0.2973,
+      "frac_clear": 0.15,
+      "ci_low": 0.0706,
+      "ci_high": 0.2907,
       "fence_ft": 344.0
     },
     {
@@ -82,13 +82,13 @@
       "ev_hi": 106.3,
       "la_lo": 48.0,
       "la_hi": 50.0,
-      "n": 219,
+      "n": 220,
       "mean_carry": 318.4,
       "median_carry": 318.0,
       "k_clear": 26,
-      "frac_clear": 0.1187,
-      "ci_low": 0.0823,
-      "ci_high": 0.1683,
+      "frac_clear": 0.1182,
+      "ci_low": 0.0819,
+      "ci_high": 0.1675,
       "fence_ft": 344.0
     },
     {
@@ -97,13 +97,13 @@
       "ev_hi": 106.8,
       "la_lo": 47.5,
       "la_hi": 50.5,
-      "n": 329,
+      "n": 330,
       "mean_carry": 320.3,
       "median_carry": 319.0,
       "k_clear": 43,
-      "frac_clear": 0.1307,
-      "ci_low": 0.0985,
-      "ci_high": 0.1714,
+      "frac_clear": 0.1303,
+      "ci_low": 0.0982,
+      "ci_high": 0.1709,
       "fence_ft": 344.0
     },
     {
@@ -112,13 +112,13 @@
       "ev_hi": 107.3,
       "la_lo": 47.0,
       "la_hi": 51.0,
-      "n": 760,
+      "n": 763,
       "mean_carry": 320.7,
       "median_carry": 322.0,
       "k_clear": 111,
-      "frac_clear": 0.1461,
-      "ci_low": 0.1227,
-      "ci_high": 0.1729,
+      "frac_clear": 0.1455,
+      "ci_low": 0.1222,
+      "ci_high": 0.1723,
       "fence_ft": 344.0
     },
     {
@@ -127,13 +127,13 @@
       "ev_hi": 107.8,
       "la_lo": 46.0,
       "la_hi": 52.0,
-      "n": 1341,
+      "n": 1344,
       "mean_carry": 321.3,
       "median_carry": 323.0,
       "k_clear": 229,
-      "frac_clear": 0.1708,
-      "ci_low": 0.1516,
-      "ci_high": 0.1918,
+      "frac_clear": 0.1704,
+      "ci_low": 0.1512,
+      "ci_high": 0.1914,
       "fence_ft": 344.0
     }
   ],
@@ -143,10 +143,10 @@
       "la0": 49.0,
       "sigma_ev": 1.0,
       "sigma_la": 1.0,
-      "eff_n": 462.3,
+      "eff_n": 462.8,
       "mean_carry": 319.9,
       "median_carry": 320.0,
-      "frac_clear": 0.1307,
+      "frac_clear": 0.1301,
       "fence_ft": 344.0
     },
     "sigma_1.5": {
@@ -154,10 +154,10 @@
       "la0": 49.0,
       "sigma_ev": 1.5,
       "sigma_la": 1.5,
-      "eff_n": 1113.7,
+      "eff_n": 1115.3,
       "mean_carry": 319.7,
       "median_carry": 320.0,
-      "frac_clear": 0.1419,
+      "frac_clear": 0.1415,
       "fence_ft": 344.0
     },
     "sigma_2.0": {
@@ -165,10 +165,10 @@
       "la0": 49.0,
       "sigma_ev": 2.0,
       "sigma_la": 2.0,
-      "eff_n": 2222.0,
+      "eff_n": 2223.7,
       "mean_carry": 319.0,
       "median_carry": 319.0,
-      "frac_clear": 0.1554,
+      "frac_clear": 0.1551,
       "fence_ft": 344.0
     }
   },
@@ -178,13 +178,13 @@
     "ev_hi": 106.5,
     "la_lo": 48.0,
     "la_hi": 50.0,
-    "n": 9,
-    "mean_carry": 314.2,
-    "median_carry": 325.0,
+    "n": 10,
+    "mean_carry": 315.1,
+    "median_carry": 324.5,
     "k_clear": 0,
     "frac_clear": 0.0,
     "ci_low": 0.0,
-    "ci_high": 0.2991,
+    "ci_high": 0.2775,
     "fence_ft": 344.0
   },
   "physics": {
@@ -201,17 +201,17 @@
       "cd0": 0.5,
       "mean": 317.0,
       "median": 317.2,
-      "p05": 279.7,
+      "p05": 279.8,
       "p95": 353.6,
       "descent_deg": 66.3
     },
     "clear_probs": {
       "generic_344_raw": {
-        "p": 0.10925,
+        "p": 0.109,
         "threshold": 344.0
       },
       "generic_344_wall8": {
-        "p": 0.08075,
+        "p": 0.08025,
         "threshold": 347.5
       },
       "park_raw": {
@@ -219,18 +219,18 @@
         "threshold": 348.3
       },
       "park_wall8": {
-        "p": 0.05925,
+        "p": 0.05875,
         "threshold": 351.9
       }
     },
     "wind_effect": {
       "available": true,
       "n": 150000,
-      "slope_ft_per_mph": 0.1973,
-      "slope_se": 0.009,
-      "intercept_ft": 3.8864,
+      "slope_ft_per_mph": 0.1926,
+      "slope_se": 0.0091,
+      "intercept_ft": 3.8493,
       "model_field_sensitivity_ft_per_mph": 3.0527,
-      "effective_wind_fraction": 0.0646
+      "effective_wind_fraction": 0.0631
     },
     "cl_knots": {
       "10": 0.05,
@@ -251,7 +251,7 @@
       "18": 1.237,
       "22": 1.145,
       "26": 1.085,
-      "30": 1.067,
+      "30": 1.068,
       "34": 1.094,
       "38": 1.162,
       "42": 1.26,
@@ -262,139 +262,182 @@
   "empirical_clear_probs": {
     "generic_344_raw": {
       "k": 33,
-      "n": 279,
-      "p": 0.11827956989247312,
+      "n": 280,
+      "p": 0.11785714285714285,
       "ci": [
-        0.08547313485723301,
-        0.16145480531072431
+        0.08516322725011,
+        0.1608947626956568
       ],
       "threshold": 344.0
     },
     "generic_344_wall8": {
       "k": 24,
-      "n": 279,
-      "p": 0.08602150537634409,
+      "n": 280,
+      "p": 0.08571428571428572,
       "ci": [
-        0.05848640049559965,
-        0.12480164729218508
+        0.05827502771289647,
+        0.12436727914419649
       ],
       "threshold": 347.5
     },
     "park_raw": {
       "k": 24,
-      "n": 279,
-      "p": 0.08602150537634409,
+      "n": 280,
+      "p": 0.08571428571428572,
       "ci": [
-        0.05848640049559965,
-        0.12480164729218508
+        0.05827502771289647,
+        0.12436727914419649
       ],
       "threshold": 348.3
     },
     "park_wall8": {
       "k": 18,
-      "n": 279,
-      "p": 0.06451612903225806,
+      "n": 280,
+      "p": 0.06428571428571428,
       "ci": [
-        0.04119568380346664,
-        0.09966576906420299
+        0.0410471536418551,
+        0.09931803115612198
       ],
       "threshold": 351.9
     }
   },
+  "spin": {
+    "measured_swing": {
+      "bat_speed_mph": 75.8,
+      "attack_angle_deg": 21.9,
+      "swing_path_tilt_deg": 34.4,
+      "swing_length_ft": 8.3,
+      "pitch_mph": 98.9,
+      "statcast_hit_distance_ft": 323.0
+    },
+    "collision": {
+      "undercut_deg": 27.1,
+      "obliquity_deg": 37.5,
+      "v_rel_mph": 172.5,
+      "v_rel_tangential_mph": 104.9,
+      "spin_ceiling_rpm": 8744,
+      "spin_estimate_rpm_lo": 1570.0,
+      "spin_estimate_rpm_hi": 2620.0
+    },
+    "empirical_attack_slope": {
+      "n": 394,
+      "slope_ft_per_deg": 1.47,
+      "median_attack_deg": 18.7,
+      "carry_at_france_attack": 319.8,
+      "carry_at_median_attack": 315.1,
+      "ev_band": [
+        102.0,
+        108.0
+      ],
+      "la_band": [
+        46.0,
+        52.0
+      ]
+    }
+  },
   "ml": {
     "direct": {
-      "median": 322.9,
+      "median": 321.3,
       "quantiles": {
-        "0.05": 293.2,
-        "0.1": 303.7,
-        "0.25": 313.0,
-        "0.5": 322.9,
-        "0.75": 327.6,
-        "0.8": 330.0,
-        "0.85": 331.4,
-        "0.9": 334.0,
-        "0.95": 346.1
+        "0.05": 294.5,
+        "0.1": 305.0,
+        "0.25": 311.9,
+        "0.5": 321.3,
+        "0.75": 329.1,
+        "0.8": 329.4,
+        "0.85": 331.0,
+        "0.9": 331.0,
+        "0.95": 350.3
       },
-      "p_clear_344": 0.0586,
-      "p_clear_344_wall8": 0.05,
-      "p_clear_park": 0.05,
+      "p_clear_344": 0.0664,
+      "p_clear_344_wall8": 0.0573,
+      "p_clear_park": 0.0551,
       "p_clear_park_wall8": 0.05,
       "p_clear_ci": [
         null,
         null
       ],
       "coverage": {
-        "89%_nominal": 0.8982,
-        "80%_nominal": 0.7987,
-        "50%_nominal": 0.4966
+        "89%_nominal": 0.8986,
+        "80%_nominal": 0.799,
+        "50%_nominal": 0.4979
       },
       "importance": {
-        "launch_speed": 4734,
-        "launch_angle": 4396,
-        "spray_deg": 4672,
-        "air_density": 821,
-        "wind_along_mph": 245,
-        "game_year": 1464,
-        "home_team": 2268
+        "launch_speed": 4735,
+        "launch_angle": 4385,
+        "spray_deg": 4605,
+        "air_density": 798,
+        "wind_along_mph": 233,
+        "game_year": 1555,
+        "home_team": 2289
       }
     },
     "residual": {
-      "median": 322.2,
+      "median": 320.7,
       "quantiles": {
-        "0.05": 293.2,
-        "0.1": 304.7,
-        "0.25": 313.9,
-        "0.5": 322.2,
-        "0.75": 325.8,
-        "0.8": 327.9,
-        "0.85": 332.6,
-        "0.9": 336.8,
-        "0.95": 342.6
+        "0.05": 294.7,
+        "0.1": 304.0,
+        "0.25": 312.6,
+        "0.5": 320.7,
+        "0.75": 326.3,
+        "0.8": 328.5,
+        "0.85": 331.8,
+        "0.9": 336.6,
+        "0.95": 342.0
       },
       "p_clear_344": 0.05,
       "p_clear_344_wall8": 0.05,
       "coverage": {
-        "89%_nominal": 0.8959,
-        "80%_nominal": 0.7946,
-        "50%_nominal": 0.495
+        "89%_nominal": 0.8955,
+        "80%_nominal": 0.7949,
+        "50%_nominal": 0.4944
       },
       "importance": {
-        "launch_speed": 3574,
-        "launch_angle": 3996,
-        "spray_deg": 3084,
-        "air_density": 1760,
-        "wind_along_mph": 1084,
-        "game_year": 1607,
-        "home_team": 3495
+        "launch_speed": 3690,
+        "launch_angle": 3986,
+        "spray_deg": 2972,
+        "air_density": 1782,
+        "wind_along_mph": 1065,
+        "game_year": 1677,
+        "home_team": 3428
       },
       "extra": {
         "physics_carry_france_dome": 317.5
       }
     },
     "bat_tracking": {
-      "median": 316.2,
-      "p_clear_344": 0.0837,
+      "median": 320.1,
+      "p_clear_344": 0.0847,
       "importance": {
-        "launch_speed": 3005,
-        "launch_angle": 4073,
-        "spray_deg": 2371,
-        "air_density": 545,
-        "wind_along_mph": 386,
-        "game_year": 92,
-        "home_team": 2636,
-        "attack_angle": 2280,
-        "swing_path_tilt": 1164,
-        "bat_speed": 819,
-        "swing_length": 1229
+        "launch_speed": 2973,
+        "launch_angle": 4114,
+        "spray_deg": 2390,
+        "air_density": 516,
+        "wind_along_mph": 360,
+        "game_year": 78,
+        "home_team": 2686,
+        "attack_angle": 2288,
+        "swing_path_tilt": 1163,
+        "bat_speed": 764,
+        "swing_length": 1268
       },
       "extra": {
-        "n_rows": 276993,
+        "n_rows": 277248,
+        "bat_france": {
+          "attack_angle": 21.9,
+          "swing_path_tilt": 34.4,
+          "bat_speed": 75.8,
+          "swing_length": 8.3
+        },
         "bat_typical": {
-          "attack_angle": 17.87,
-          "swing_path_tilt": 32.48,
-          "bat_speed": 77.6,
+          "attack_angle": 17.92,
+          "swing_path_tilt": 32.49,
+          "bat_speed": 77.5,
           "swing_length": 7.8
-        }
+        },
+        "median_france_swing": 320.1,
+        "median_typical_swing": 317.4,
+        "p_clear_344_typical_swing": 0.0816
       }
     }
   },
@@ -404,17 +447,17 @@
   },
   "rows": [
     {
-      "name": "Method 1 empirical (2015-2026 pool, n=279)",
+      "name": "Method 1 empirical (2015-2026 pool, n=280)",
       "central_carry": "319",
       "generic_344_raw": "11.8% [8.5, 16.1]",
-      "generic_344_wall8": "8.6% [5.8, 12.5]",
-      "park_raw": "8.6% [5.8, 12.5]",
-      "park_wall8": "6.5% [4.1, 10.0]"
+      "generic_344_wall8": "8.6% [5.8, 12.4]",
+      "park_raw": "8.6% [5.8, 12.4]",
+      "park_wall8": "6.4% [4.1, 9.9]"
     },
     {
       "name": "Method 1 kernel (sigma 1.5)",
       "central_carry": "320",
-      "generic_344_raw": "14.2%",
+      "generic_344_raw": "14.1%",
       "generic_344_wall8": "",
       "park_raw": "",
       "park_wall8": ""
@@ -423,21 +466,21 @@
       "name": "Method 2 physics (sensitivity MC)",
       "central_carry": "318",
       "generic_344_raw": "10.9%",
-      "generic_344_wall8": "8.1%",
+      "generic_344_wall8": "8.0%",
       "park_raw": "7.5%",
       "park_wall8": "5.9%"
     },
     {
       "name": "Method 3 ML direct",
-      "central_carry": "323",
-      "generic_344_raw": "5.9%",
-      "generic_344_wall8": "5.0%",
-      "park_raw": "5.0%",
+      "central_carry": "321",
+      "generic_344_raw": "6.6%",
+      "generic_344_wall8": "5.7%",
+      "park_raw": "5.5%",
       "park_wall8": "5.0%"
     },
     {
       "name": "Method 3 ML physics-residual",
-      "central_carry": "322",
+      "central_carry": "321",
       "generic_344_raw": "5.0%",
       "generic_344_wall8": "5.0%",
       "park_raw": "5.0%",
@@ -445,11 +488,11 @@
     },
     {
       "name": "Method 3 ML + bat-tracking (2024+)",
-      "central_carry": "316",
-      "generic_344_raw": "8.4%",
-      "generic_344_wall8": "7.5%",
-      "park_raw": "7.3%",
-      "park_wall8": "6.4%"
+      "central_carry": "320",
+      "generic_344_raw": "8.5%",
+      "generic_344_wall8": "7.6%",
+      "park_raw": "7.4%",
+      "park_wall8": "6.5%"
     }
   ]
 }
