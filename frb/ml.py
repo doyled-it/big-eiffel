@@ -292,7 +292,15 @@ def residual_estimate(
 def bat_tracking_estimate(
     df: pd.DataFrame, descent_deg: float, wall_penalty: float, wall_park: float
 ) -> MLEstimate | None:
-    """2024+ estimate adding bat-tracking fields as a partial spin proxy."""
+    """2024+ estimate using France's actual bat tracking as a spin proxy.
+
+    France's swing was measured by Statcast (game_pk 849830): a 75.8 mph barrel
+    on a 21.9 deg uppercut, which launched the ball at 49 deg. The bat-tracking
+    fields are the observable fingerprint of the collision, and backspin is set
+    by the collision. Feeding the real swing in lets the model condition on that
+    specific contact rather than a league-typical one. For comparison we also
+    predict at the median swing of comparable high-launch balls.
+    """
     sub = df[df.game_year >= 2024].copy()
     sub = sub.dropna(
         subset=["launch_speed", "launch_angle", "spray_deg", "hit_distance_sc", "home_team"] + BAT_FEATURES
@@ -305,19 +313,30 @@ def bat_tracking_estimate(
     X = sub[feats]
     y = sub["hit_distance_sc"].to_numpy(float)
 
-    # Typical bat-tracking values for comparable high-launch balls near France.
+    # France's measured swing (the actual ball) and, for contrast, the median
+    # swing of comparable high-launch balls.
+    bat_france = {
+        "attack_angle": C.FRANCE_ATTACK_ANGLE,
+        "swing_path_tilt": C.FRANCE_SWING_PATH_TILT,
+        "bat_speed": C.FRANCE_BAT_SPEED,
+        "swing_length": C.FRANCE_SWING_LENGTH,
+    }
     near = sub[(sub.launch_angle.between(44, 54)) & (sub.launch_speed.between(102, 108))]
     bat_typ = {f: float(near[f].median()) for f in BAT_FEATURES}
 
     models = train_quantiles(X, y)
-    fr = france_row(sub["home_team"].cat.categories)
-    for f in BAT_FEATURES:
-        fr[f] = bat_typ[f]
-    fr = fr[feats]
-    qvals = {q: float(v[0]) for q, v in predict_quantiles(models, fr).items()}
-    qs = sorted(qvals)
-    fr_vals = [qvals[q] for q in qs]
-    p344, p344w, ppark, pparkw = _clear_probs(qs, fr_vals, descent_deg, wall_penalty, wall_park)
+
+    def _predict_with(bat_vals: dict):
+        fr = france_row(sub["home_team"].cat.categories)
+        for f in BAT_FEATURES:
+            fr[f] = bat_vals[f]
+        fr = fr[feats]
+        qv = {q: float(v[0]) for q, v in predict_quantiles(models, fr).items()}
+        qss = sorted(qv)
+        return qv, _clear_probs(qss, [qv[q] for q in qss], descent_deg, wall_penalty, wall_park)
+
+    qvals, (p344, p344w, ppark, pparkw) = _predict_with(bat_france)
+    qvals_typ, (p344_typ, _, _, _) = _predict_with(bat_typ)
     imp = dict(zip(feats, models[0.5].feature_importances_.tolist()))
     return MLEstimate(
         name="bat_tracking_2024plus",
@@ -328,7 +347,14 @@ def bat_tracking_estimate(
         p_clear_park=ppark,
         p_clear_park_wall=pparkw,
         importance=imp,
-        extra={"n_rows": int(len(sub)), "bat_typical": {k: round(v, 2) for k, v in bat_typ.items()}},
+        extra={
+            "n_rows": int(len(sub)),
+            "bat_france": {k: round(v, 2) for k, v in bat_france.items()},
+            "bat_typical": {k: round(v, 2) for k, v in bat_typ.items()},
+            "median_france_swing": round(qvals[0.5], 1),
+            "median_typical_swing": round(qvals_typ[0.5], 1),
+            "p_clear_344_typical_swing": round(p344_typ, 4),
+        },
     )
 
 
