@@ -369,15 +369,19 @@ The reader-facing page lives in `web/index.template.html` (one HTML file, Chart.
 from a CDN, no framework). `make site` injects `outputs/chartdata.json` into it and
 writes `site/index.html`, a self-contained static page.
 
-It deploys on [Cloudflare Pages](https://pages.cloudflare.com/):
+It deploys as a Cloudflare Worker serving static assets (`wrangler.jsonc` points at
+`site/`, an assets-only Worker with no server code):
 
-1. In the Cloudflare dashboard, create a Pages project and connect this GitHub repo.
-2. Framework preset **None**, build command **empty**, build output directory **`site`**.
-3. Add the custom domain **bigeiffel.doyled-it.com** under the project's Custom Domains.
+1. Cloudflare dashboard, **Workers & Pages**, **Create**, **Import a repository**, and
+   connect `doyled-it/big-eiffel`.
+2. Leave the **build command empty** (`site/index.html` is committed) and keep the
+   deploy command `npx wrangler deploy`. `wrangler.jsonc` serves `./site`.
+3. After the first deploy, open the Worker, **Settings**, **Domains & Routes**, **Add**,
+   **Custom Domain**, and enter `bigeiffel.doyled-it.com`.
 
-There is no build step on Cloudflare: `site/index.html` is committed, so every push to
-`main` redeploys it. To refresh the page after changing the analysis or the template,
-run `make site` and commit the result.
+Every push to `main` redeploys. Locally, `npm install` then `npm run deploy` publishes
+it too. To refresh the page after changing the analysis or the template, run `make site`
+and commit the result.
 
 ## Sources
 

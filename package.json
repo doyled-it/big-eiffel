@@ -1,0 +1,12 @@
+{
+  "name": "big-eiffel",
+  "private": true,
+  "description": "Static site deploy tooling for the Big Eiffel page (Cloudflare Workers assets).",
+  "scripts": {
+    "deploy": "wrangler deploy",
+    "dev": "wrangler dev"
+  },
+  "devDependencies": {
+    "wrangler": "^4.0.0"
+  }
+}

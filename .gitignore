@@ -20,3 +20,7 @@ outputs/*_log.txt
 .DS_Store
 data/updates/
 data/openmeteo_*.parquet
+
+# Cloudflare Workers / Node
+node_modules/
+.wrangler/

@@ -1,0 +1,12 @@
+{
+  // Cloudflare Workers static-assets deployment (the current, non-legacy path).
+  // This is an assets-only Worker: no server code, it just serves the built
+  // static site in ./site. `make site` regenerates ./site/index.html.
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "big-eiffel",
+  "compatibility_date": "2025-06-01",
+  "assets": {
+    "directory": "./site",
+    "not_found_handling": "404-page"
+  }
+}
