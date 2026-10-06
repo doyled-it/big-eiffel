@@ -168,11 +168,18 @@ def main() -> None:
     carr = P.carry_vec(np.full(n_s, C.FRANCE_EV), np.full(n_s, C.FRANCE_LA), cl49 * clsc, rhos_s, np.full(n_s, cd49))
     carr = carr + rng2.normal(0.0, spin_sigma, n_s)
     out["trajectory"]["landing_samples"] = [round(float(x), 1) for x in carr]
-    # Where the ball came down: the model free flight (318 ft) and Statcast's
-    # projection (323 ft) agree, ~320 ft, deep in left field short of the wall.
-    out["trajectory"]["catch_ft"] = 320.0
-    out["trajectory"]["cable_x"] = out["trajectory"]["apex_x"]
-    out["trajectory"]["cable_z"] = out["trajectory"]["apex_z"]
+    # Physically simulated path after the cable: free flight to the apex, a
+    # glancing speed loss (the cable), then the rest of the fall under drag and
+    # the backspin lift. Lands shorter than the free flight, deep in left.
+    dcx, dcz, cax, caz, cland = P.post_cable_trajectory(
+        C.FRANCE_EV, C.FRANCE_LA, cl49, rho_dome, cd=cd49, speed_retained=0.9
+    )
+    stepc = max(1, len(dcx) // 64)
+    out["trajectory"]["cable_path_x"] = [round(float(v), 1) for v in dcx[::stepc]] + [round(float(dcx[-1]), 1)]
+    out["trajectory"]["cable_path_z"] = [round(float(v), 1) for v in dcz[::stepc]] + [round(float(dcz[-1]), 1)]
+    out["trajectory"]["cable_x"] = round(float(cax), 1)
+    out["trajectory"]["cable_z"] = round(float(caz), 1)
+    out["trajectory"]["catch_ft"] = round(float(cland), 1)
 
     out["spin"] = {
         "bat_speed": sp["measured_swing"]["bat_speed_mph"],

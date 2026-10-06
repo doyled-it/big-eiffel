@@ -244,7 +244,6 @@ def plot_trajectory_profile(
     apex_i = int(np.argmax(tr.z_ft))
     apex_x, apex_z = float(tr.x_ft[apex_i]), float(tr.z_ft[apex_i])
     land = float(tr.range_ft)
-    catch = 315.0  # cable-clipped ball: deep left, just inside the free-flight spot
 
     # Aerodynamic envelope: sample temperature and lift (spin), min/max height per distance.
     rng = np.random.default_rng(0)
@@ -269,11 +268,12 @@ def plot_trajectory_profile(
                     label="plausible range (temperature + spin)")
     ax.plot(tr.x_ft, tr.z_ft, "-", color=ACCENT, lw=2.6, label=f"model free flight → {land:.0f} ft")
 
-    # Interrupted path: from the cable (apex) down to the catch, hugging the free flight.
-    tt = np.linspace(0, 1, 60)
-    xi = apex_x + (catch - apex_x) * tt
-    zi = apex_z * (1 - tt) ** 1.35
-    ax.plot(xi, np.clip(zi, 0, None), ":", color="#6a6a6a", lw=1.9, label="path after the cable (estimated)")
+    # Path after the cable: the real integrated descent (free flight to the apex,
+    # a glancing speed loss, then the fall under drag and the backspin lift).
+    dcx, dcz, _, _, catch = P.post_cable_trajectory(
+        C.FRANCE_EV, C.FRANCE_LA, cl0, rho_dome, cd=cd0, speed_retained=0.9
+    )
+    ax.plot(dcx, dcz, ":", color="#6a6a6a", lw=1.9, label="path after the cable (estimated)")
 
     # The 344 ft fence, 8 ft tall, to scale; labels to its right.
     ax.add_patch(plt.Rectangle((C.FENCE_FT, 0), 2.4, C.WALL_HEIGHT_FT, color=INK))

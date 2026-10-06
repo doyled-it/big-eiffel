@@ -182,6 +182,77 @@ def carry_vec(
     return rng
 
 
+def post_cable_trajectory(
+    ev_mph: float,
+    la_deg: float,
+    cl: float,
+    rho_: float,
+    cd: float = C.CD,
+    speed_retained: float = 0.78,
+    z0: float = C.LAUNCH_HEIGHT_M,
+    dt: float = 0.001,
+):
+    """The ball's path after it clips the cable near its apex.
+
+    Integrates the free flight to the apex, then bleeds a fraction of the
+    forward speed to stand in for the glancing cable contact, and integrates the
+    rest of the fall with the same drag and backspin lift. The descent therefore
+    comes from the real physics: it steepens under gravity, while the backspin
+    Magnus force carries it forward and softens that steepening (it does not
+    flatten the ball out at the ground). The speed loss is an estimate, so the
+    landing point is approximate.
+
+    Arguments:
+        ev_mph: Exit velocity (mph).
+        la_deg: Launch angle (deg).
+        cl: Effective lift coefficient (the backspin lift).
+        rho_: Air density (kg/m^3).
+        cd: Effective drag coefficient.
+        speed_retained: Fraction of forward speed kept through the cable contact.
+        z0: Contact height (m).
+        dt: Integration step (s).
+
+    Returns:
+        (descent_x_ft, descent_z_ft, apex_x_ft, apex_z_ft, landing_ft): the path
+        from the apex to the ground, plus the apex and landing in feet.
+    """
+    drag = 0.5 * rho_ * cd * C.BALL_AREA_M2 / C.BALL_MASS_KG
+    lift = 0.5 * rho_ * cl * C.BALL_AREA_M2 / C.BALL_MASS_KG
+    v = ev_mph * C.MPH_TO_MS
+    th = np.radians(la_deg)
+    vx, vz = v * np.cos(th), v * np.sin(th)
+    x, z = 0.0, z0
+    xs, zs = [x], [z]
+    apex_i = 0
+    cut = False
+    for i in range(200000):
+        sp = np.hypot(vx, vz)
+        ax = -drag * sp * vx - lift * sp * vz
+        az = -C.GRAVITY - drag * sp * vz + lift * sp * vx
+        vx += ax * dt
+        vz += az * dt
+        if not cut and vz <= 0:  # just reached the apex: the cable bleeds forward speed
+            apex_i = i + 1
+            vx *= speed_retained
+            cut = True
+        x += vx * dt
+        z += vz * dt
+        xs.append(x)
+        zs.append(z)
+        if z <= 0:
+            break
+    xs = np.array(xs) * C.M_TO_FT
+    zs = np.array(zs) * C.M_TO_FT
+    if zs[-1] <= 0 and len(zs) > 1:
+        z1, z2, x1, x2 = zs[-2], zs[-1], xs[-2], xs[-1]
+        frac = z1 / (z1 - z2) if z1 != z2 else 1.0
+        land = float(x1 + frac * (x2 - x1))
+        xs[-1], zs[-1] = land, 0.0
+    else:
+        land = float(xs[-1])
+    return xs[apex_i:], zs[apex_i:], float(xs[apex_i]), float(zs[apex_i]), land
+
+
 def integrate(
     ev_mph: float,
     la_deg: float,
