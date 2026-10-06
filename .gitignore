@@ -11,9 +11,12 @@ data/*.parquet
 !data/batted_balls_sample.parquet
 !data/batted_balls_weather_sample.parquet
 data/DATASET_CARD.md
+data/card_figures/
 
 # Transient logs
 outputs/*_log.txt
 
 # OS
 .DS_Store
+data/updates/
+data/openmeteo_*.parquet

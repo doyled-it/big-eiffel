@@ -1,0 +1,28 @@
+name: Update weather dataset
+
+# Appends the previous days' games to the HuggingFace dataset once a day.
+# During the offseason there are no new games and the run is a no-op.
+on:
+  schedule:
+    - cron: "0 12 * * *" # daily at 12:00 UTC, after the prior day's games finish
+  workflow_dispatch: {}
+
+concurrency:
+  group: update-dataset
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          python-version: "3.13"
+          enable-cache: true
+      - name: Install dependencies
+        run: uv sync
+      - name: Append recent games to the dataset
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        run: uv run python -m scripts.update_dataset --days 8

@@ -28,3 +28,9 @@ test:
 
 clean:
 	rm -f figures/*.png outputs/*.json outputs/*.md outputs/*_log.txt
+
+update:
+	uv run python -m scripts.update_dataset --days 8
+
+publish:
+	uv run python scripts/publish_hf.py

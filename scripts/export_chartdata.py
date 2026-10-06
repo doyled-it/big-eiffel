@@ -57,13 +57,26 @@ def main() -> None:
             emp_la.append(float(a))
             emp_mean.append(round(float(hd[m].mean()), 1))
     la_fine = np.arange(10, 56, 1.0)
-    model = [round(float(P.carry(105, float(a), float(cli(clamp(a))), rho_ref, cd=C.CD * float(kdi(clamp(a))))), 1) for a in la_fine]
-    out["carry_vs_la"] = {"emp_la": emp_la, "emp_mean": emp_mean, "model_la": [float(x) for x in la_fine], "model": model}
+    model = [
+        round(float(P.carry(105, float(a), float(cli(clamp(a))), rho_ref, cd=C.CD * float(kdi(clamp(a))))), 1)
+        for a in la_fine
+    ]
+    out["carry_vs_la"] = {
+        "emp_la": emp_la,
+        "emp_mean": emp_mean,
+        "model_la": [float(x) for x in la_fine],
+        "model": model,
+    }
 
     # France carry distribution (gate window, full 2015-2026 pool).
     gm = df.launch_speed.between(104, 106.5) & df.launch_angle.between(48, 50)
     carry = sorted(round(float(x), 1) for x in df.loc[gm, "hit_distance_sc"])
-    out["france_hist"] = {"carry": carry, "fence": 344, "mean": round(float(np.mean(carry)), 1), "cleared": int(sum(c >= 344 for c in carry))}
+    out["france_hist"] = {
+        "carry": carry,
+        "fence": 344,
+        "mean": round(float(np.mean(carry)), 1),
+        "cleared": int(sum(c >= 344 for c in carry)),
+    }
 
     # ML predictive quantiles.
     q = res["ml"]["direct"]["quantiles"]
@@ -88,9 +101,21 @@ def main() -> None:
         "rho": [float(r) for r in rhos],
         "carry": dcarry,
         "markers": [
-            {"label": "Coors Field", "rho": 0.99, "carry": round(float(P.carry(C.FRANCE_EV, C.FRANCE_LA, cl49, 0.99, cd=cd49)), 1)},
-            {"label": "AmFam dome", "rho": dome_rho, "carry": round(float(P.carry(C.FRANCE_EV, C.FRANCE_LA, cl49, dome_rho, cd=cd49)), 1)},
-            {"label": "cold sea level", "rho": 1.26, "carry": round(float(P.carry(C.FRANCE_EV, C.FRANCE_LA, cl49, 1.26, cd=cd49)), 1)},
+            {
+                "label": "Coors Field",
+                "rho": 0.99,
+                "carry": round(float(P.carry(C.FRANCE_EV, C.FRANCE_LA, cl49, 0.99, cd=cd49)), 1),
+            },
+            {
+                "label": "AmFam dome",
+                "rho": dome_rho,
+                "carry": round(float(P.carry(C.FRANCE_EV, C.FRANCE_LA, cl49, dome_rho, cd=cd49)), 1),
+            },
+            {
+                "label": "cold sea level",
+                "rho": 1.26,
+                "carry": round(float(P.carry(C.FRANCE_EV, C.FRANCE_LA, cl49, 1.26, cd=cd49)), 1),
+            },
         ],
     }
 

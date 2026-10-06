@@ -70,9 +70,18 @@ size_categories:
 
 # Statcast batted balls with per-game weather, air density, and field wind
 
-Every regular-season batted ball with a measured exit velocity, launch angle,
-and Statcast hit distance, 2015 through 2026, joined to the conditions it was
-hit in.
+Every regular-season and postseason batted ball with a measured exit velocity,
+launch angle, and Statcast hit distance, 2015 through 2026, joined to the
+conditions it was hit in. The base file covers the history; `data/updates/`
+holds daily partitions appended through the season.
+
+## What the join buys you
+
+![Hotter air, more home runs](figures/temp_vs_hr.png)
+
+![Retractable roofs, open vs closed](figures/roof_effect.png)
+
+![Park carry factors](figures/park_carry_factors.png)
 
 ## What is here
 
@@ -118,14 +127,18 @@ Built with https://github.com/doyled-it/france-roof-ball
 """
 
 
-def build_clean() -> pd.DataFrame:
-    df = pd.read_parquet(C.ENRICHED_PARQUET)
+def clean_frame(df: pd.DataFrame) -> pd.DataFrame:
+    """Apply the public column names and selection to an enriched frame."""
     # Drop the raw Open-Meteo columns so the resolved *_use columns can take
     # their clean public names without colliding.
     df = df.drop(columns=[c for c in ("temp_f", "rh_pct", "pressure_hpa") if c in df.columns])
     df = df.rename(columns=RENAME)
     cols = [c for c in PUBLISH_COLS if c in df.columns]
     return df[cols].copy()
+
+
+def build_clean() -> pd.DataFrame:
+    return clean_frame(pd.read_parquet(C.ENRICHED_PARQUET))
 
 
 def main() -> None:
@@ -158,6 +171,14 @@ def main() -> None:
         repo_id=args.repo,
         repo_type="dataset",
     )
+    # Card figures, if they have been generated.
+    fig_dir = C.DATA / "card_figures"
+    for name in ("temp_vs_hr.png", "roof_effect.png", "park_carry_factors.png"):
+        fp = fig_dir / name
+        if fp.exists():
+            api.upload_file(
+                path_or_fileobj=str(fp), path_in_repo=f"figures/{name}", repo_id=args.repo, repo_type="dataset"
+            )
     api.upload_file(path_or_fileobj=str(card), path_in_repo="README.md", repo_id=args.repo, repo_type="dataset")
     print(f"published https://huggingface.co/datasets/{args.repo}")
 
