@@ -1,0 +1,634 @@
+<title>Ty France's Roof Ball</title>
+<meta name="description" content="How likely Ty France's roof-cable ball was to clear the fence, estimated three ways from Statcast data.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: single-column data story, ~680px reading column, full-bleed chart cards.
+   Tokens first (light), redefined for dark under both media and [data-theme]. */
+:root{
+  --bg:#f3f4f1; --surface:#ffffff; --fg:#15181c; --muted:#59636e;
+  --line:#dadfd8; --grid:rgba(0,0,0,.08);
+  --accent:#df4f27;      /* over the fence, home run */
+  --accent-soft:#f3cfc2;
+  --cool:#36627f;        /* fell short, distribution */
+  --cool-soft:#c6d6df;
+  --display:"Oswald",system-ui,sans-serif;
+  --body:"IBM Plex Sans",system-ui,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#111419; --surface:#191d23; --fg:#e7eae5; --muted:#99a4b0;
+  --line:#2a313a; --grid:rgba(255,255,255,.09);
+  --accent:#ff6b3d; --accent-soft:#4a2a1e; --cool:#5c9ccc; --cool-soft:#213744;
+  color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --bg:#111419; --surface:#191d23; --fg:#e7eae5; --muted:#99a4b0;
+  --line:#2a313a; --grid:rgba(255,255,255,.09);
+  --accent:#ff6b3d; --accent-soft:#4a2a1e; --cool:#5c9ccc; --cool-soft:#213744;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--body);line-height:1.6;
+  -webkit-font-smoothing:antialiased;font-size:16.5px}
+.wrap{max-width:720px;margin:0 auto;padding-inline:20px;padding-block:0}
+h1,h2,h3{font-family:var(--display);font-weight:600;line-height:1.08;text-wrap:balance;letter-spacing:.2px}
+p{margin:0 0 1em}
+a{color:var(--accent);text-decoration:none;border-bottom:1px solid var(--accent-soft)}
+a:hover{border-bottom-color:var(--accent)}
+.mono{font-family:var(--mono)}
+.eyebrow{font-family:var(--mono);font-size:.74rem;letter-spacing:.14em;text-transform:uppercase;
+  color:var(--muted);margin:0 0 14px}
+/* Hero */
+.hero{padding-block:48px 28px;border-bottom:1px solid var(--line)}
+.hero h1{font-size:clamp(2.6rem,9vw,4.4rem);font-weight:700;margin:0 0 20px;letter-spacing:-.5px}
+.lede{font-size:1.18rem;color:var(--fg)}
+.lede b{color:var(--accent);font-weight:600}
+.stats{display:flex;flex-wrap:wrap;gap:14px;margin-top:28px}
+.stat{flex:1 1 180px;min-width:0;background:var(--surface);border:1px solid var(--line);
+  border-radius:12px;padding:18px 18px 16px}
+.stat .big{font-family:var(--display);font-weight:700;font-size:2.7rem;line-height:1;
+  font-variant-numeric:tabular-nums}
+.stat.hr .big{color:var(--accent)}
+.stat .lab{font-size:.9rem;color:var(--muted);margin-top:8px;display:block}
+.stat .sub{font-family:var(--mono);font-size:.76rem;color:var(--muted);margin-top:6px}
+/* Scoreboard */
+.board{display:grid;grid-template-columns:repeat(auto-fit,minmax(104px,1fr));gap:1px;
+  background:var(--line);border:1px solid var(--line);border-radius:12px;overflow:hidden;margin:26px 0 8px}
+.board div{background:var(--surface);padding:12px 14px}
+.board .k{font-family:var(--mono);font-size:.68rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.board .v{font-family:var(--display);font-weight:600;font-size:1.3rem;margin-top:3px;font-variant-numeric:tabular-nums}
+/* Sections */
+section{padding-block:38px;border-bottom:1px solid var(--line)}
+section h2{font-size:clamp(1.5rem,5vw,2rem);margin:0 0 6px}
+.kicker{font-family:var(--mono);font-size:.74rem;letter-spacing:.12em;text-transform:uppercase;
+  color:var(--accent);margin:0 0 10px}
+/* Chart card */
+.card{background:var(--surface);border:1px solid var(--line);border-radius:14px;
+  padding:18px 16px 14px;margin-top:20px}
+.card .ctitle{font-family:var(--display);font-weight:600;font-size:1.12rem;margin:0 0 2px;line-height:1.2;max-width:none}
+.card .csub{font-size:.9rem;color:var(--muted);margin:0 0 12px;max-width:none}
+.chart-box{position:relative;width:100%}
+.src{font-family:var(--mono);font-size:.72rem;color:var(--muted);margin-top:12px;line-height:1.5;max-width:none}
+.legend{display:flex;flex-wrap:wrap;gap:16px;margin:2px 0 10px;font-size:.84rem;color:var(--muted)}
+.legend span{display:inline-flex;align-items:center;gap:7px}
+.swatch{width:13px;height:13px;border-radius:3px;display:inline-block}
+/* Table */
+.tablewrap{overflow-x:auto;margin-top:18px;border:1px solid var(--line);border-radius:12px}
+table{border-collapse:collapse;width:100%;min-width:560px;font-size:.9rem}
+th,td{padding:10px 12px;text-align:right;border-bottom:1px solid var(--line);font-variant-numeric:tabular-nums}
+th:first-child,td:first-child{text-align:left;font-variant-numeric:normal}
+thead th{font-family:var(--mono);font-size:.68rem;letter-spacing:.04em;text-transform:uppercase;
+  color:var(--muted);font-weight:500;vertical-align:bottom}
+tbody tr:last-child td{border-bottom:0}
+td.hi{color:var(--accent);font-weight:600}
+.rowlab{font-weight:500}
+.rowlab small{display:block;color:var(--muted);font-weight:400;font-size:.82em}
+/* Limitations */
+ul.lim{list-style:none;padding:0;margin:14px 0 0;display:flex;flex-direction:column;gap:12px}
+ul.lim li{padding-left:26px;position:relative}
+ul.lim li::before{content:"";position:absolute;left:0;top:.6em;width:10px;height:10px;border-radius:2px;
+  background:var(--cool)}
+ul.lim li.key::before{background:var(--accent)}
+ul.lim b{font-weight:600}
+footer{padding-block:34px 60px;color:var(--muted);font-size:.9rem}
+footer .mono{font-size:.78rem}
+.toggle{position:fixed;top:env(safe-area-inset-top,0px);right:14px;margin-top:12px;z-index:9;
+  background:var(--surface);border:1px solid var(--line);color:var(--muted);border-radius:999px;
+  font-family:var(--mono);font-size:.72rem;padding:7px 12px;cursor:pointer}
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.55);display:none;align-items:center;justify-content:center;z-index:30;padding:18px}
+.modal.open{display:flex}
+.modal .box{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:20px 18px 16px;max-width:600px;width:100%;position:relative}
+.modal .x{position:absolute;top:8px;right:12px;background:none;border:0;color:var(--muted);font-size:1.5rem;line-height:1;cursor:pointer}
+@media (max-width:420px){body{font-size:16px}.hero{padding-top:40px}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+
+<button class="toggle" id="themeBtn" aria-label="Toggle theme">theme</button>
+
+<div class="wrap">
+
+  <header class="hero">
+    <p class="eyebrow">NLDS Game 1 &middot; American Family Field &middot; October 2026</p>
+    <h1>Would it have gone out?</h1>
+    <p class="lede">Ty France hit a ball 105.3 mph at 49 degrees down the left-field line. It clipped a roof support cable near the top of its arc and was caught in left. Absent the cable, that ball <b>reaches</b> the 344 foot fence about one time in eight, and <b>clears</b> it for a home run about half as often.</p>
+    <div class="stats">
+      <div class="stat hr">
+        <span class="big" id="s-prob">11.8%</span>
+        <span class="lab">chance of reaching 344 ft</span>
+        <span class="sub">empirical, 95% interval 8 to 16%</span>
+      </div>
+      <div class="stat">
+        <span class="big" id="s-carry">319 ft</span>
+        <span class="lab">expected carry</span>
+        <span class="sub">about 25 ft short of the fence</span>
+      </div>
+      <div class="stat">
+        <span class="big">~6%</span>
+        <span class="lab">chance of a true home run</span>
+        <span class="sub">over the 8 ft wall and fair; 4 to 10%</span>
+      </div>
+    </div>
+  </header>
+
+  <section>
+    <p>Exit velocity and launch angle are measured at the bat, before the ball nears the roof, so removing the cable changes none of the inputs. It only lets the ball finish its flight. The question is an ordinary one: how far does a ball hit this hard and this steep carry, and does it clear the fence fair? Three methods answer it, and they point the same way.</p>
+    <div class="board">
+      <div><div class="k">Exit velo</div><div class="v">105.3</div></div>
+      <div><div class="k">Launch</div><div class="v">49&deg;</div></div>
+      <div><div class="k">Spray</div><div class="v">-44&deg;</div></div>
+      <div><div class="k">Fence</div><div class="v">344 ft</div></div>
+      <div><div class="k">Wall</div><div class="v">8 ft</div></div>
+      <div><div class="k">Roof</div><div class="v">Closed</div></div>
+    </div>
+  </section>
+
+  <section>
+    <p class="kicker">The flight</p>
+    <h2>Free of the cable, the ball comes down short of the fence</h2>
+    <p>The arc below is the model's free flight for France's ball in the dome's still air, drawn to scale from home plate. It climbs to about 134 feet and lands near <span id="t-land">318</span>, well short of the 344 foot fence. The strike sits at the apex, since a ball cannot clip a cable higher than its own peak, and because a cable only steals speed the ball came down just inside the free flight, deep in left. The marks along the ground are the model's landing distribution over a plausible range of temperature and spin: most fall short, about 11 percent reach the fence.</p>
+    <div class="card">
+      <p class="ctitle">A 49 degree ball climbs high and lands short</p>
+      <p class="csub">Side view from home plate, to scale: the free-flight arc, the cable-clipped path, and the model's landing distribution along the ground.</p>
+      <div class="legend">
+        <span><i class="swatch" style="background:var(--accent)"></i>model free flight</span>
+        <span><i class="swatch" style="background:#d99a2b"></i>roof cable</span>
+        <span><i class="swatch" style="background:var(--muted)"></i>path after the cable</span>
+        <span><i class="swatch" style="background:var(--fg)"></i>344 ft fence (8 ft)</span>
+      </div>
+      <div class="chart-box" id="trajBox"></div>
+      <p class="src">Source: the fitted drag-plus-Magnus model at the France launch (105.3 mph, 49&deg;), closed-roof air density, no wind. The dashed path after the cable is the model's own descent once a glancing speed loss at the apex is applied: it steepens under gravity while the backspin carries it forward. The cable height and the exact speed loss are estimates (a ball cannot clip a cable above its own apex, and a cable can only shorten a flight). The ground rug is the model's landing distribution over temperature and spin (5th-95th percentile 280 to 354 ft); Statcast's own projected distance for the ball was 323 ft.</p>
+    </div>
+  </section>
+
+  <section>
+    <p class="kicker">The evidence</p>
+    <h2>What 280 comparable balls actually did</h2>
+    <p>From 2015 to 2026, 280 balls were hit at the same speed and angle (104 to 106.5 mph, 48 to 50 degrees), none off a cable. Their mean carry was 319 feet, and 33, or 11.8 percent, reached 344. No model stands between the question and the answer here: these are real balls like France's. On the 2015 to 2025 regular-season subset the pipeline reproduces an established baseline exactly (250 balls, 31 cleared), which confirms the data and filter.</p>
+    <div class="card">
+      <p class="ctitle" id="c1t">Most balls like France's landed short of 344 feet</p>
+      <p class="csub">Carry distance of the 280 matching balls. The fence sits in the right tail.</p>
+      <div class="legend">
+        <span><i class="swatch" style="background:var(--cool)"></i>fell short</span>
+        <span><i class="swatch" style="background:var(--accent)"></i>reached 344 ft (33 balls)</span>
+      </div>
+      <div class="chart-box" style="height:300px"><canvas id="chartHist"></canvas></div>
+      <p class="src">Source: MLB Statcast via Baseball Savant, 2015-2026 regular season and postseason (n = 280). Carry is the Statcast projected hit distance. Interval is Wilson 95%.</p>
+    </div>
+  </section>
+
+  <section>
+    <p class="kicker">Why 49 degrees</p>
+    <h2>A ball carries farthest near 30 degrees, not 49</h2>
+    <p>At 49 degrees the ball climbs too steeply, trading distance for height. Hit this hard at 30 degrees it carries past 400 feet; by 49 it is down near 316. The physics model is fit to the whole curve, not this one point: a low backspin lift plus a drag term that grows for steep balls. It tracks the data within a few feet across the range, the steep band included.</p>
+    <div class="card">
+      <p class="ctitle">Carry peaks near 30 degrees, then falls off by 49</p>
+      <p class="csub">Mean carry at 105 mph by launch angle. France was hit at the far end.</p>
+      <div class="legend">
+        <span><i class="swatch" style="background:var(--cool)"></i>measured mean</span>
+        <span><i class="swatch" style="background:var(--accent);height:3px;border-radius:0"></i>fitted physics model</span>
+      </div>
+      <div class="chart-box" style="height:320px"><canvas id="chartLA"></canvas></div>
+      <p class="src">Source: MLB Statcast, balls at 105 &plusmn; 1.5 mph, 2015-2026. Model: a drag-plus-Magnus integrator with effective lift and drag fit across exit velocity, launch angle, and air density (RMSE 2.65 ft).</p>
+    </div>
+  </section>
+
+  <section>
+    <p class="kicker">The model</p>
+    <h2>Predicting the whole distribution for this exact ball</h2>
+    <p>A gradient-boosted model trained on 1.45 million batted balls predicts a carry distribution for France's exact inputs: 105.3 mph, 49 degrees, down the line, in Milwaukee's still dome air. It is the one method that sees the full conditions. Reading the curve up to 344 feet gives the chance of reaching it. Its 89, 80, and 50 percent intervals cover 89, 79, and 49 percent of held-out balls, so the spread is honest. Conditioned on the dome's dense, still air it sits below the all-conditions rate, because the comparable balls that reached 344 were often helped by warm or thin air the closed roof lacks.</p>
+    <div class="card">
+      <p class="ctitle" id="c3t">At the dome's air, the model reaches 344 about 7 percent of the time</p>
+      <p class="csub">Predicted cumulative probability of carry at the France input (direct quantile model).</p>
+      <div class="chart-box" style="height:300px"><canvas id="chartCDF"></canvas></div>
+      <p class="src">Source: LightGBM quantile regression on 1.45M Statcast batted balls, 2015-2026. Features: exit velocity, launch angle, spray angle, air density, along-flight wind, season, park. Time-based holdout for calibration.</p>
+    </div>
+  </section>
+
+  <section>
+    <p class="kicker">The target</p>
+    <h2>Down the line, the wall sits at 348 feet</h2>
+    <p>Down the left-field line the wall is 348 feet, four deeper than the 344 foot foul pole. And an 8 foot wall is not a line on the ground: a steeply falling ball must land a few feet past its base to clear it. Both make a home run a little harder than just reaching 344.</p>
+    <div class="card">
+      <p class="ctitle">At the France line, the wall is 348 feet</p>
+      <p class="csub">American Family Field wall distance by spray angle, seen from home plate.</p>
+      <div class="chart-box" id="parkBox"></div>
+      <p class="src">Source: published American Family Field dimensions, interpolated between anchor distances (foul lines 344 and 345 ft, center 400 ft).</p>
+    </div>
+  </section>
+
+  <section>
+    <p class="kicker">The air it was hit in</p>
+    <h2>Thin air is worth almost 40 feet of carry</h2>
+    <p>A ball carries farther in thin air. So every one of the 2.5 million balls was joined to the conditions it was hit in: roof and field wind from the MLB game report, hourly humidity and pressure from a weather reanalysis at each park. That gives each ball a true air density and lets the physics be fit across speed, angle, and density together, free of the altitude mix.</p>
+    <p>Milwaukee's dome is near league-average density, so the pooled estimate holds there, but air is worth a lot. The same ball carries 318 feet in the dome, 305 in cold sea-level air, and 344 at Coors Field's altitude. That Coors carry reaches the 344 foot line, nearly 40 feet more than the densest parks, yet it is still short of the 348 foot wall: even thin air does not quite make it a home run.</p>
+    <div class="card">
+      <p class="ctitle">The same France ball reaches 344 ft only in thin air</p>
+      <p class="csub">Carry of the 105.3 mph, 49 degree ball across air densities, from the fitted model.</p>
+      <div class="legend">
+        <span><i class="swatch" style="background:var(--accent)"></i>Coors Field (0.99)</span>
+        <span><i class="swatch" style="background:#3a9d5d"></i>Milwaukee dome (1.16)</span>
+        <span><i class="swatch" style="background:var(--cool)"></i>cold sea level (1.26)</span>
+      </div>
+      <div class="chart-box" style="height:300px"><canvas id="chartDensity"></canvas></div>
+      <p class="src">Source: the fitted drag-plus-Magnus model at the France launch, evaluated across air density. Density from temperature, humidity, pressure, and elevation.</p>
+    </div>
+    <p style="margin-top:20px">Wind we measured rather than assumed. Across 150,000 open-air balls, Statcast's projected carry moves just <b>about 0.2 feet per mph</b> of reported tailwind, far below the roughly 3 feet per mph a ball feeling the full wind would show. The projection is largely wind-neutralized, so wind is not a hidden confound, and the closed roof had none anyway.</p>
+  </section>
+
+  <section>
+    <p class="kicker">The swing</p>
+    <h2>It was a big uppercut, and that put heavy backspin on the ball</h2>
+    <p>Statcast never publishes batted-ball spin, but since 2024 it tracks the bat, and France's swing is on record: a <b>75.8 mph</b> barrel on a <b>21.9 degree</b> uppercut against a 98.9 mph fastball. The ball left at 49 degrees, well above the swing path, so the bat undercut it by about <b>27 degrees</b>. Undercut is what spins a ball, and the collision geometry puts this one near <b>1,600 to 2,600 rpm</b>: a lot.</p>
+    <p>That steep launch is inefficient on its own, which is most of why the ball lands short, but the swing did not add to it. Among comparable balls a steeper attack angle like France's carries a touch farther, because reaching 49 degrees with a steeper swing takes less undercut, and so less of the backspin that fights a climbing ball. Fed his real swing instead of a league-typical one, the model raises the estimate slightly. <span id="t-batline">It lands near 320 feet and reaches 344 about 8.5 percent of the time, a hair more than a typical swing.</span></p>
+    <div class="board">
+      <div><div class="k">Bat speed</div><div class="v">75.8</div></div>
+      <div><div class="k">Attack</div><div class="v">21.9&deg;</div></div>
+      <div><div class="k">Undercut</div><div class="v">27&deg;</div></div>
+      <div><div class="k">Backspin</div><div class="v">~2000</div></div>
+    </div>
+    <p class="src">Source: Statcast bat tracking for the swing (game_pk 849830). Backspin is not published; it is estimated from the measured bat speed, attack angle, and exit velocity via the ball-bat collision geometry (Nathan), so it is a bounded estimate, not a measurement.</p>
+  </section>
+
+  <section>
+    <p class="kicker">The answer</p>
+    <h2>Where the three methods land</h2>
+    <p>The three methods rest on different assumptions. They agree on the carry, a central 317 to 322 feet, and the verdict, probably short. On the exact chance of reaching 344 they spread: the two most direct, the empirical pool and the condition-grounded physics, put it at 11 and 12 percent; the machine-learning models, conditioned on the exact dome air, sit lower at 5 to 7 percent, with the bat-tracking model at about 8.5. The raw column reaches the fence on the ground; the wall column also clears 8 feet while staying fair, the real bar for a home run.</p>
+    <div class="tablewrap">
+      <table id="restable">
+        <thead><tr>
+          <th>Method</th><th>Carry (ft)</th><th>344 raw</th><th>344 + 8 ft wall</th><th>Milwaukee + wall</th>
+        </tr></thead>
+        <tbody id="rtbody"></tbody>
+      </table>
+    </div>
+    <p class="src">Milwaukee + wall is the strictest column: reach the 348 ft wall at the France line, clear 8 ft, stay fair. Empirical intervals are Wilson 95%.</p>
+  </section>
+
+  <section>
+    <p class="kicker">Caveats</p>
+    <h2>What we still can't measure</h2>
+    <ul class="lim">
+      <li class="key"><b>Backspin is estimated, not measured.</b> Public Statcast gives no batted-ball spin, so the swing only bounds it (about 1,600 to 2,600 rpm). A collision model built to pin it from the swing barely helped: the swing explains only ~7 percent of the carry scatter, because the spread at a fixed launch is set by the exact contact point, which bat tracking can't see. Hawk-Eye tracked the real flight up to the cable, but those positions and any measured spin stay with MLB, not the public feed. So the answer is a distribution, not a point.</li>
+      <li><b>Carry is a projection.</b> Statcast hit distance is a modeled flight distance, not a surveyed landing, and carries its own error, though it appears largely wind-neutral.</li>
+      <li><b>Field wind is still uncertain.</b> The reported wind is a station reading, not the wind inside the bowl; we measured how little the projection responds to it, but the true field wind stays loosely pinned.</li>
+      <li><b>The park and roof are approximate.</b> Wall distances are interpolated from a few published anchors, and the roof state is best-effort from the game report.</li>
+    </ul>
+  </section>
+
+  <footer>
+    <p>Most likely a long out: about a one-in-eight shot to reach the fence, closer to one in sixteen to clear it for a home run.</p>
+    <p class="mono">Data: MLB Statcast (2015-2025 via the Jensen-holm HuggingFace mirror, 2026 from Baseball Savant), game weather and roof from the MLB StatsAPI, humidity and pressure from Open-Meteo. Enriched dataset: <a href="https://huggingface.co/datasets/doyled-it/statcast-batted-balls-weather">doyled-it/statcast-batted-balls-weather</a>. Code and tests: <a href="https://github.com/doyled-it/big-eiffel">github.com/doyled-it/big-eiffel</a></p>
+  </footer>
+
+</div>
+
+<div class="modal" id="landModal" role="dialog" aria-modal="true" aria-label="Model landing distribution">
+  <div class="box">
+    <button class="x" id="landX" aria-label="Close">&times;</button>
+    <p class="ctitle">Where the model lands the ball</p>
+    <p class="csub" id="landSub"></p>
+    <div class="chart-box" style="height:300px"><canvas id="chartLanding"></canvas></div>
+    <p class="src">Free-flight landing distance over a plausible range of temperature and spin, the same model as the arc. The 344 ft fence sits in the right tail.</p>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script>
+const DATA = __DATA__;
+
+const cssv = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+let charts = [];
+
+// vertical reference line plugin (data-space x)
+const vLine = {
+  id:'vline',
+  afterDatasetsDraw(chart, a, opts){
+    (opts.lines||[]).forEach(L=>{
+      const area = chart.chartArea;
+      let x;
+      if(L.frac!=null){ x = area.left + L.frac*(area.right-area.left); }
+      else { const sx = chart.scales.x; if(!sx) return; x = sx.getPixelForValue(L.x); }
+      if(x==null||isNaN(x)) return;
+      const {top,bottom} = area, ctx = chart.ctx;
+      ctx.save();
+      ctx.strokeStyle = L.color; ctx.lineWidth = L.width||1.5; ctx.setLineDash(L.dash||[5,4]);
+      ctx.beginPath(); ctx.moveTo(x,top); ctx.lineTo(x,bottom); ctx.stroke();
+      if(L.label){ ctx.setLineDash([]); ctx.fillStyle=L.color; ctx.font='500 12px "IBM Plex Mono",monospace';
+        ctx.textAlign = L.align||'left'; ctx.fillText(L.label, x + (L.align==='right'?-7:7), top + (L.ty||13)); }
+      ctx.restore();
+    });
+  }
+};
+Chart.register(vLine);
+
+// horizontal reference line plugin (data-space y)
+const hLine = {
+  id:'hline',
+  afterDatasetsDraw(chart, a, opts){
+    if(!opts || opts.y==null) return;
+    const sy=chart.scales.y; if(!sy) return;
+    const y=sy.getPixelForValue(opts.y); if(y==null||isNaN(y)) return;
+    const {left,right}=chart.chartArea, ctx=chart.ctx;
+    ctx.save();
+    ctx.strokeStyle=opts.color; ctx.lineWidth=opts.width||1.8; ctx.setLineDash(opts.dash||[6,4]);
+    ctx.beginPath(); ctx.moveTo(left,y); ctx.lineTo(right,y); ctx.stroke();
+    if(opts.label){ ctx.setLineDash([]); ctx.fillStyle=opts.color; ctx.font='500 12px "IBM Plex Mono",monospace';
+      ctx.textAlign='right'; ctx.fillText(opts.label, right-6, y-6); }
+    ctx.restore();
+  }
+};
+Chart.register(hLine);
+
+function baseOpts(){
+  const fg=cssv('--fg'), muted=cssv('--muted'), grid=cssv('--grid');
+  Chart.defaults.font.family = '"IBM Plex Sans",system-ui,sans-serif';
+  Chart.defaults.color = muted;
+  return {fg,muted,grid};
+}
+
+function histData(){
+  const w=8, fence=DATA.france_hist.fence, c=DATA.france_hist.carry;
+  const mn=Math.min(...c), mx=Math.max(...c);
+  const lo = fence - w*Math.ceil((fence-mn)/w);
+  const hi = fence + w*Math.ceil((mx-fence)/w);
+  const n = Math.round((hi-lo)/w);
+  const counts=new Array(n).fill(0);
+  c.forEach(v=>{ let i=Math.floor((v-lo)/w); if(i<0)i=0; if(i>=n)i=n-1; counts[i]++; });
+  const centers=[], colors=[];
+  const acc=cssv('--accent'), cool=cssv('--cool');
+  for(let i=0;i<n;i++){ const c0=lo+i*w; centers.push(c0+w/2); colors.push(c0>=fence?acc:cool); }
+  const frac344=Math.round((fence-lo)/w)/n;
+  const fracMean=Math.round((DATA.france_hist.mean-lo)/w)/n;
+  return {centers,counts,colors,lo,hi,w,fence,frac344,fracMean,n};
+}
+
+function build(){
+  charts.forEach(c=>c.destroy()); charts=[];
+  const {fg,muted,grid}=baseOpts();
+  const acc=cssv('--accent'), cool=cssv('--cool');
+
+  // 1. histogram
+  const H=histData();
+  charts.push(new Chart(document.getElementById('chartHist'),{
+    type:'bar',
+    data:{labels:H.centers.map(x=>Math.round(x)),
+      datasets:[{data:H.counts,backgroundColor:H.colors,borderWidth:0,barPercentage:1,categoryPercentage:1}]},
+    options:{responsive:true,maintainAspectRatio:false,animation:false,
+      plugins:{legend:{display:false},tooltip:{callbacks:{title:it=>`${H.lo+it[0].dataIndex*H.w} to ${H.lo+(it[0].dataIndex+1)*H.w} ft`,label:it=>`${it.raw} balls`}},
+        vline:{lines:[
+          {frac:H.frac344,color:fg,width:2,dash:[6,4],label:'344 ft',align:'left'},
+          {frac:H.fracMean,color:cool,width:1.5,dash:[2,3],label:'mean '+Math.round(DATA.france_hist.mean),align:'right'}
+        ]}},
+      scales:{x:{grid:{display:false},ticks:{color:muted,maxRotation:0,autoSkip:true,callback:function(v){const l=this.getLabelForValue(v);return l%20===0?l:'';}},title:{display:true,text:'carry distance (ft)',color:muted}},
+        y:{beginAtZero:true,grid:{color:grid},ticks:{color:muted},title:{display:true,text:'number of balls',color:muted}}}}
+  }));
+
+  // 2. carry vs LA
+  const emp=DATA.carry_vs_la.emp_la.map((a,i)=>({x:a,y:DATA.carry_vs_la.emp_mean[i]}));
+  const mdl=DATA.carry_vs_la.model_la.map((a,i)=>({x:a,y:DATA.carry_vs_la.model[i]}));
+  charts.push(new Chart(document.getElementById('chartLA'),{
+    type:'scatter',
+    data:{datasets:[
+      {label:'model',data:mdl,showLine:true,borderColor:acc,borderWidth:2.5,pointRadius:0,tension:.3,order:2},
+      {label:'measured',data:emp,backgroundColor:cool,borderColor:cool,pointRadius:3.4,order:1}
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,animation:false,
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:it=>`${it.parsed.x}°: ${Math.round(it.parsed.y)} ft`}},
+        vline:{lines:[{x:49,color:fg,width:1.5,dash:[5,4],label:'France 49°',align:'right',ty:13}]}},
+      scales:{x:{min:10,max:56,grid:{color:grid},ticks:{color:muted,stepSize:10},title:{display:true,text:'launch angle (degrees)',color:muted}},
+        y:{min:180,grid:{color:grid},ticks:{color:muted},title:{display:true,text:'carry distance (ft)',color:muted}}}}
+  }));
+
+  // 3. CDF
+  const cdf=DATA.ml_cdf.v.map((v,i)=>({x:v,y:DATA.ml_cdf.q[i]}));
+  charts.push(new Chart(document.getElementById('chartCDF'),{
+    type:'scatter',
+    data:{datasets:[{data:cdf,showLine:true,borderColor:cool,borderWidth:2.5,backgroundColor:cool,pointRadius:3,tension:.2}]},
+    options:{responsive:true,maintainAspectRatio:false,animation:false,
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:it=>`${Math.round(it.parsed.x)} ft: ${Math.round(it.parsed.y*100)}% at or below`}},
+        vline:{lines:[{x:344,color:acc,width:2,dash:[6,4],label:`344 ft → ${(DATA.ml_cdf.p_clear*100).toFixed(1)}% reach`,align:'right',ty:13}]}},
+      scales:{x:{grid:{color:grid},ticks:{color:muted},title:{display:true,text:'carry distance (ft)',color:muted}},
+        y:{min:0,max:1,grid:{color:grid},ticks:{color:muted,callback:v=>Math.round(v*100)+'%'},title:{display:true,text:'cumulative probability',color:muted}}}}
+  }));
+
+  // 4. air density effect at the France profile
+  const green='#3a9d5d';
+  const dc=DATA.density_curve;
+  const dpts=dc.rho.map((r,i)=>({x:r,y:dc.carry[i]}));
+  charts.push(new Chart(document.getElementById('chartDensity'),{
+    type:'scatter',
+    data:{datasets:[
+      {data:dpts,showLine:true,borderColor:fg,borderWidth:2.5,pointRadius:0,tension:.2,order:2},
+      {data:dc.markers.map(m=>({x:m.rho,y:m.carry})),pointRadius:6,
+        backgroundColor:dc.markers.map((m,i)=>[acc,green,cool][i]),borderWidth:0,order:1}
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,animation:false,
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:it=>`density ${it.parsed.x.toFixed(2)}: ${Math.round(it.parsed.y)} ft`}},
+        hline:{y:344,color:acc,label:'344 ft fence'}},
+      scales:{x:{reverse:true,grid:{color:grid},ticks:{color:muted},title:{display:true,text:'air density (kg/m^3), thinner air to the right',color:muted}},
+        y:{grid:{color:grid},ticks:{color:muted},title:{display:true,text:'carry distance (ft)',color:muted}}}}
+  }));
+
+  drawTrajectory();
+  drawPark();
+}
+
+function drawTrajectory(){
+  const T=DATA.trajectory;
+  const fg=cssv('--fg'), muted=cssv('--muted'), acc=cssv('--accent'), cool=cssv('--cool'), accSoft=cssv('--accent-soft');
+  const green='#3a9d5d', gold='#d99a2b';
+  const SC=1.3;                                  // px per foot, equal aspect
+  const Xmax=412, Zmax=Math.max(T.apex_z,120)+46, Zmin=-30, padX=12, padT=10;
+  const Wpx=Xmax*SC+padX*2, Hpx=(Zmax-Zmin)*SC+padT*2;
+  const X=xf=>(padX+xf*SC).toFixed(1);
+  const Y=zf=>(padT+(Zmax-zf)*SC).toFixed(1);
+  const g=Y(0);
+
+  const arc=T.x.map((x,i)=>`${i?'L':'M'}${X(x)} ${Y(T.z[i])}`).join(' ');
+  let band='M'+X(T.x[0])+' '+Y(T.band_hi[0]);
+  for(let i=1;i<T.x.length;i++) band+=' L'+X(T.x[i])+' '+Y(T.band_hi[i]);
+  for(let i=T.x.length-1;i>=0;i--) band+=' L'+X(T.x[i])+' '+Y(T.band_lo[i]);
+  band+=' Z';
+  // Path after the cable: the real integrated descent (free flight to the apex,
+  // a glancing speed loss, then the fall under drag and the backspin lift). It
+  // steepens under gravity while backspin carries it forward, deep in left.
+  const cx=T.cable_x, cz=T.cable_z, cpt=T.catch_ft, cpx=T.cable_path_x, cpz=T.cable_path_z;
+  const intr=cpx.map((x,i)=>`${i?'L':'M'}${X(x)} ${Y(cpz[i])}`).join(' ');
+  const S=T.landing_samples||[];
+  const rug=S.map(d=>`<line x1="${X(d)}" y1="${(+g+3).toFixed(1)}" x2="${X(d)}" y2="${(+g+12).toFixed(1)}" stroke="${d>=T.wall_ft?acc:cool}" stroke-width="1" opacity="0.55"/>`).join('');
+  const smin=Math.min(...S), smax=Math.max(...S);
+  const shortv=Math.round(T.wall_ft-T.landing_ft);
+  const frac=Math.round(100*S.filter(d=>d>=T.wall_ft).length/Math.max(S.length,1));
+
+  const svg=`
+  <svg viewBox="0 0 ${Wpx.toFixed(0)} ${Hpx.toFixed(0)}" width="100%" style="max-width:100%;height:auto" role="img"
+       aria-label="Side view of France's ball from home plate, to scale. The model's free-flight arc peaks about ${Math.round(cz)} feet up and lands about ${Math.round(T.landing_ft)} feet out, ${shortv} feet short of the 344 foot, 8 foot fence. A gold mark near the apex is the roof cable; the dashed path is where the clipped ball came down, deep in left field. A rug along the ground shows the model's landing distribution; ${frac} percent reach the fence.">
+    <style>
+      .arc{fill:none;stroke:${acc};stroke-width:2.6;stroke-linejoin:round}
+      .band{fill:${accSoft};opacity:.55}
+      .intr{fill:none;stroke:${muted};stroke-width:1.8;stroke-dasharray:3 4;opacity:.85}
+      .grd{stroke:${muted};stroke-width:1}
+      .tick{stroke:${muted};stroke-width:1;opacity:.5}
+      .lab{fill:${muted};font:500 12px "IBM Plex Mono",monospace}
+      .labf{fill:${fg};font:600 12px "IBM Plex Mono",monospace}
+      .labg{fill:${green};font:600 12px "IBM Plex Mono",monospace}
+      .hint{fill:${cool};font:600 11.5px "IBM Plex Mono",monospace;cursor:pointer}
+      .sfk{stroke:${green};stroke-width:1.4}
+      #rugHit{cursor:pointer}
+    </style>
+    <line class="grd" x1="${X(0)}" y1="${g}" x2="${X(Xmax)}" y2="${g}"/>
+    ${[100,200,300,400].map(d=>`<line class="tick" x1="${X(d)}" y1="${g}" x2="${X(d)}" y2="${(+g+4).toFixed(1)}"/><text x="${X(d)}" y="${(+g+22).toFixed(1)}" text-anchor="middle" class="lab">${d}</text>`).join('')}
+    <path class="band" d="${band}"/>
+    <g>${rug}<rect id="rugHit" x="${X(smin-5)}" y="${(+g+1).toFixed(1)}" width="${((smax-smin+12)*SC).toFixed(1)}" height="15" fill="transparent"/></g>
+    <path class="arc" d="${arc}"/>
+    <path class="intr" d="${intr}"/>
+    <rect x="${X(T.wall_ft)}" y="${Y(T.wall_height_ft)}" width="${(SC*2.6).toFixed(1)}" height="${(T.wall_height_ft*SC).toFixed(1)}" fill="${fg}"/>
+    <text x="${X(T.wall_ft)}" y="${Y(27)}" text-anchor="middle" class="labf">344 ft</text>
+    <text x="${X(T.wall_ft)}" y="${Y(16)}" text-anchor="middle" class="lab">fence, 8 ft</text>
+    <line class="sfk" x1="${X(T.landing_ft)}" y1="${Y(46)}" x2="${X(T.wall_ft)}" y2="${Y(46)}"/>
+    <text x="${X((T.landing_ft+T.wall_ft)/2)}" y="${Y(52)}" text-anchor="middle" class="labg">${shortv} ft short</text>
+    <line x1="${X(cx-16)}" y1="${Y(cz)}" x2="${X(cx+16)}" y2="${Y(cz)}" stroke="${gold}" stroke-width="3"/>
+    <circle cx="${X(cx)}" cy="${Y(cz)}" r="5" fill="${gold}" stroke="${fg}" stroke-width="0.8"/>
+    <text x="${X(cx)}" y="${Y(cz+27)}" text-anchor="middle" class="lab">clipped the roof cable near its apex</text>
+    <text x="${X(cx)}" y="${Y(cz+15)}" text-anchor="middle" class="lab">best estimate ~${Math.round(cz)} ft up, ${Math.round(cx)} ft out</text>
+    <circle cx="${X(cpt)}" cy="${Y(3)}" r="4.5" fill="${fg}"/>
+    <rect x="${X(0)-4}" y="${(+g-4).toFixed(1)}" width="8" height="8" fill="${fg}" transform="rotate(45 ${X(0)} ${g})"/>
+    <text x="${X(8)}" y="${(+g-7).toFixed(1)}" text-anchor="start" class="lab">home</text>
+    <text id="rugHint" x="${X(250)}" y="${(+g+36).toFixed(1)}" text-anchor="middle" class="hint">tap the ground marks for the full landing distribution</text>
+  </svg>`;
+  document.getElementById('trajBox').innerHTML=svg;
+  const hit=document.getElementById('rugHit'), hint=document.getElementById('rugHint');
+  if(hit) hit.addEventListener('click', openLandingModal);
+  if(hint) hint.addEventListener('click', openLandingModal);
+}
+
+function drawPark(){
+  const P=DATA.park, fg=cssv('--fg'), muted=cssv('--muted'), acc=cssv('--accent'), cool=cssv('--cool'), line=cssv('--line');
+  const SC=1.2;                 // pixels per foot (fixed, so font sizes are predictable)
+  const rad=d=>d*Math.PI/180;
+  const CH=6.8;                 // approx px per character at 12px mono
+  const pt=(d,deg)=>[d*Math.sin(rad(deg))*SC, d*Math.cos(rad(deg))*SC];  // feet,deg -> px (x right, y up)
+  const wallPx=P.spray.map((s,i)=>pt(P.wall[i], s));
+  // anchor labels placed radially outside each anchor
+  const LOFF=20;                // radial label offset in feet
+  const anchors=Object.keys(P.anchors).map(k=>{const deg=+k,d=P.anchors[k];
+    const [px,py]=pt(d,deg), [lx,ly]=pt(d+LOFF,deg);
+    return {deg,d,px,py,lx,ly,txt:`${d.toFixed(0)} ft`};});
+  const [fx,fy]=pt(P.france_wall, P.france_spray);           // France endpoint (px)
+  // France callout sits mid-line, shifted into the open infield to the right
+  const flx=fx*0.5+34*SC, fly=fy*0.5, fTxt='France line, 348 ft';
+  // bounds in px from every drawn/labelled point plus text width
+  const Lext=a=>{const w=a.txt.length*CH; return a.lx<-4?[a.lx-w,a.lx]:a.lx>4?[a.lx,a.lx+w]:[a.lx-w/2,a.lx+w/2];};
+  const allX=[...wallPx.map(p=>p[0]),0,fx, flx, flx+fTxt.length*CH, ...anchors.flatMap(Lext)];
+  const allY=[...wallPx.map(p=>p[1]),-12*SC,fy, ...anchors.map(a=>a.ly)];
+  const padX=10, padY=16;
+  const minX=Math.min(...allX)-padX, maxX=Math.max(...allX)+padX;
+  const minY=-14*SC, maxY=Math.max(...allY)+padY;
+  const W=maxX-minX, Hh=maxY-minY;
+  const X=x=>(x-minX).toFixed(1), Y=y=>(maxY-y).toFixed(1);   // flip y for SVG
+  const wallPath=wallPx.map((p,i)=>`${i?'L':'M'}${X(p[0])} ${Y(p[1])}`).join(' ');
+  const foulPath=deg=>{const [ex,ey]=pt(P.wall[deg<0?0:P.wall.length-1],deg);return `M${X(0)} ${Y(0)} L${X(ex)} ${Y(ey)}`;};
+  let dots='',alabs='';
+  anchors.forEach(a=>{
+    dots+=`<circle cx="${X(a.px)}" cy="${Y(a.py)}" r="3.4" fill="${cool}"/>`;
+    const anc=a.lx<-4?'end':a.lx>4?'start':'middle';
+    alabs+=`<text x="${X(a.lx)}" y="${Y(a.ly-4)}" text-anchor="${anc}" class="pl">${a.txt}</text>`;
+  });
+  const svg=`
+  <svg viewBox="0 0 ${W.toFixed(0)} ${Hh.toFixed(0)}" width="100%" style="max-width:100%;height:auto" role="img"
+       aria-label="Top-down map of American Family Field wall distance by spray angle. The wall is 344 ft at the left-field line, 371 in the gap, 400 at center, and 348 ft along the France line, the deepest point the ball was headed toward.">
+    <style>
+      .fl{stroke:${line};stroke-width:1.4}
+      .wall{fill:none;stroke:${fg};stroke-width:2.6;stroke-linejoin:round}
+      .fr{stroke:${acc};stroke-width:2.4;stroke-dasharray:7 5}
+      .pl{fill:${muted};font:500 12px "IBM Plex Mono",monospace}
+      .frl{fill:${acc};font:600 12.5px "IBM Plex Mono",monospace}
+      .home{fill:${fg}}
+    </style>
+    <path class="fl" d="${foulPath(-45)}"/>
+    <path class="fl" d="${foulPath(45)}"/>
+    <path class="wall" d="${wallPath}"/>
+    <path class="fr" d="M${X(0)} ${Y(0)} L${X(fx)} ${Y(fy)}"/>
+    ${dots}
+    <circle cx="${X(fx)}" cy="${Y(fy)}" r="4.4" fill="${acc}"/>
+    ${alabs}
+    <text x="${X(flx)}" y="${Y(fly)}" text-anchor="start" class="frl">${fTxt}</text>
+    <rect x="${X(0)-4}" y="${Y(0)-4}" width="8" height="8" class="home" transform="rotate(45 ${X(0)} ${Y(0)})"/>
+    <text x="${X(0)}" y="${Y(-11*SC)}" text-anchor="middle" class="pl">home</text>
+  </svg>`;
+  document.getElementById('parkBox').innerHTML = svg;
+}
+
+// results table
+(function(){
+  const body=document.getElementById('rtbody');
+  DATA.rows.forEach(r=>{
+    const nm=r.name.replace(/^Method \d+ /,'');
+    const tr=document.createElement('tr');
+    tr.innerHTML=`<td class="rowlab">${nm}</td>
+      <td>${r.central_carry}</td>
+      <td>${r.generic_344_raw||'&middot;'}</td>
+      <td>${r.generic_344_wall8||'&middot;'}</td>
+      <td>${r.park_wall8||'&middot;'}</td>`;
+    body.appendChild(tr);
+  });
+})();
+
+build();
+
+// Fill the two prose figures from the data so they never drift from the charts.
+(function(){
+  const T=DATA.trajectory, B=DATA.ml_bat;
+  const setTxt=(id,t)=>{const e=document.getElementById(id); if(e) e.textContent=t;};
+  if(T) setTxt('t-land', Math.round(T.landing_ft));
+  if(B) setTxt('t-batline',
+    `It lands near ${Math.round(B.median)} feet and reaches 344 about ${(B.p_clear_344*100).toFixed(1)} percent of the time, a hair more than a typical swing.`);
+})();
+
+// landing-distribution popup (opened from the ground rug on the trajectory plot)
+let landChart=null;
+function openLandingModal(){
+  const S=(DATA.trajectory.landing_samples||[]).slice(); if(!S.length) return;
+  const {fg,muted,grid}=baseOpts();
+  const acc=cssv('--accent'), cool=cssv('--cool'), fence=DATA.trajectory.wall_ft, w=10;
+  const mn=Math.min(...S), mx=Math.max(...S);
+  const lo=fence-w*Math.ceil((fence-mn)/w), hi=fence+w*Math.ceil((mx-fence)/w);
+  const n=Math.round((hi-lo)/w), counts=new Array(n).fill(0);
+  S.forEach(v=>{let i=Math.floor((v-lo)/w); if(i<0)i=0; if(i>=n)i=n-1; counts[i]++;});
+  const centers=[], colors=[];
+  for(let i=0;i<n;i++){ const c0=lo+i*w; centers.push(c0+w/2); colors.push(c0>=fence?acc:cool); }
+  const fr344=Math.round((fence-lo)/w)/n;
+  const frac=Math.round(100*S.filter(d=>d>=fence).length/S.length);
+  const p05=Math.round(DATA.trajectory.landing_p05), p95=Math.round(DATA.trajectory.landing_p95);
+  document.getElementById('landSub').textContent=
+    `${S.length} model landings · 5th to 95th percentile ${p05}-${p95} ft · ${frac}% reach the 344 ft fence`;
+  if(landChart) landChart.destroy();
+  landChart=new Chart(document.getElementById('chartLanding'),{
+    type:'bar',
+    data:{labels:centers.map(x=>Math.round(x)),datasets:[{data:counts,backgroundColor:colors,borderWidth:0,barPercentage:1,categoryPercentage:1}]},
+    options:{responsive:true,maintainAspectRatio:false,animation:false,
+      plugins:{legend:{display:false},tooltip:{callbacks:{title:it=>`${lo+it[0].dataIndex*w} to ${lo+(it[0].dataIndex+1)*w} ft`,label:it=>`${it.raw} of ${S.length}`}},
+        vline:{lines:[{frac:fr344,color:fg,width:2,dash:[6,4],label:'344 ft',align:'right'}]}},
+      scales:{x:{grid:{display:false},ticks:{color:muted,maxRotation:0,autoSkip:true,callback:function(v){const l=this.getLabelForValue(v);return l%20===0?l:'';}},title:{display:true,text:'landing distance (ft)',color:muted}},
+        y:{beginAtZero:true,grid:{color:grid},ticks:{color:muted},title:{display:true,text:'model landings',color:muted}}}}
+  });
+  document.getElementById('landModal').classList.add('open');
+}
+function closeLandingModal(){ document.getElementById('landModal').classList.remove('open'); }
+document.getElementById('landX').addEventListener('click', closeLandingModal);
+document.getElementById('landModal').addEventListener('click', e=>{ if(e.target.id==='landModal') closeLandingModal(); });
+document.addEventListener('keydown', e=>{ if(e.key==='Escape') closeLandingModal(); });
+
+// theme
+const mq=window.matchMedia('(prefers-color-scheme:dark)');
+mq.addEventListener&&mq.addEventListener('change',()=>{requestAnimationFrame(build);});
+document.getElementById('themeBtn').addEventListener('click',()=>{
+  const cur=document.documentElement.getAttribute('data-theme');
+  const sysDark=mq.matches;
+  const next = cur ? (cur==='dark'?'light':'dark') : (sysDark?'light':'dark');
+  document.documentElement.setAttribute('data-theme',next);
+  requestAnimationFrame(build);
+});
+</script>

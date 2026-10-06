@@ -1,4 +1,4 @@
-.PHONY: all run quick data lint fmt test clean
+.PHONY: all run quick data lint fmt test clean site chartdata
 
 # Full reproduction: pull data if needed, run all three methods, write tables
 # and figures. The ML models are seeded, so this is deterministic.
@@ -34,3 +34,11 @@ update:
 
 publish:
 	uv run python scripts/publish_hf.py
+
+# Export the web page's chart data from the latest results.
+chartdata:
+	uv run python -m scripts.export_chartdata
+
+# Build the deployable static site into site/ (Cloudflare Pages serves this).
+site: chartdata
+	uv run python scripts/build_site.py
