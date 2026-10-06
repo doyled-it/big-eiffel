@@ -156,6 +156,24 @@ def main() -> None:
         "wall_height_ft": C.WALL_HEIGHT_FT,
         "statcast_dist": C.FRANCE_STATCAST_DIST,
     }
+    # Landing distribution for the plausible-landing band (reproduces the physics
+    # sensitivity sweep: temperature plus per-ball spin scatter at the France launch).
+    near = df[df.launch_speed.between(103, 107) & df.launch_angle.between(47, 51) & df.air_density.between(1.14, 1.19)]
+    spin_sigma = float(near.hit_distance_sc.std()) if len(near) >= 30 else 22.0
+    rng2 = np.random.default_rng(1)
+    n_s = 320
+    temps = rng2.uniform(60.0, 80.0, n_s)
+    clsc = np.clip(rng2.normal(1.0, 0.35 / 2.0, n_s), 0.3, 2.0)
+    rhos_s = np.array([float(P.rho(float(t), C.DOME_ELEV_M, C.DOME_RH)) for t in temps])
+    carr = P.carry_vec(np.full(n_s, C.FRANCE_EV), np.full(n_s, C.FRANCE_LA), cl49 * clsc, rhos_s, np.full(n_s, cd49))
+    carr = carr + rng2.normal(0.0, spin_sigma, n_s)
+    out["trajectory"]["landing_samples"] = [round(float(x), 1) for x in carr]
+    # Where the ball came down: the model free flight (318 ft) and Statcast's
+    # projection (323 ft) agree, ~320 ft, deep in left field short of the wall.
+    out["trajectory"]["catch_ft"] = 320.0
+    out["trajectory"]["cable_x"] = out["trajectory"]["apex_x"]
+    out["trajectory"]["cable_z"] = out["trajectory"]["apex_z"]
+
     out["spin"] = {
         "bat_speed": sp["measured_swing"]["bat_speed_mph"],
         "attack_angle": sp["measured_swing"]["attack_angle_deg"],

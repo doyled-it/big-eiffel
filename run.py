@@ -378,6 +378,7 @@ def main() -> None:
             carry_p05=sens["p05"],
             carry_p95=sens["p95"],
             spin_rpm=spin_rng,
+            landing_samples=sens["carries"],
         )
         PL.plot_carry_vs_la(df, fit, C.FIGURES / "carry_vs_launch_angle.png")
         PL.plot_france_distribution(df, C.FIGURES / "france_carry_distribution.png")
