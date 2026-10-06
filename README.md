@@ -10,18 +10,18 @@ carried over the 344 ft left-field fence had the cable not been there.
 
 ## The headline
 
-The ball most likely would not have gone out, but it was far from hopeless.
+The ball most likely would not have gone out, but the chance it would was real.
 
-- **Expected carry was about 318 to 320 ft**, roughly 25 ft short of the 344 ft
+- **Expected carry was about 318 to 321 ft**, roughly 25 ft short of the 344 ft
   fence. The empirical mean is 319 ft, the physics model gives 318 ft, and the
   ML models give 320 to 321 ft.
-- There was about a **1-in-8 chance (11.8%, plausibly 9 to 16%)** of carrying
+- There was about a **1-in-8 chance (11.8%, plausibly 8 to 16%)** of carrying
   the raw 344 ft on the ground, measured directly from 280 regular-season and postseason balls hit at the
   same speed and angle over 2015 to 2026. The physics model, now fit to each
   ball's actual air density, independently agrees at 10.9%.
 - Across methods the raw number spans about 5 to 14%. The two most directly
   grounded estimators, the empirical pool (11.8%) and the physics model (10.9%),
-  land near 12%; the machine-learning models, which condition on the exact dome
+  land at 11 and 12 percent; the machine-learning models, which condition on the exact dome
   air, sit lower, 5 to 7%, with the bat-tracking model that also sees France's
   real swing at about 8.5%.
 - That falls to roughly **5 to 7%** once you also require the ball to clear the
@@ -40,8 +40,7 @@ The ball most likely would not have gone out, but it was far from hopeless.
   the bat-tracking model conditions on the real contact. The honest output
   remains a distribution over carry, with the probability from its upper tail.
 
-In one line: most likely a long out, with a real minority chance it was a home
-run, and the number is low but not zero.
+Most likely a long out, with a real minority chance it was a home run.
 
 ## The question, precisely
 
@@ -69,7 +68,7 @@ Primary source for 2015 to 2025: the HuggingFace dataset
 [`Jensen-holm/statcast-era-pitches`](https://huggingface.co/datasets/Jensen-holm/statcast-era-pitches),
 a parquet mirror of MLB Statcast pitch-by-pitch data that comes from Baseball
 Savant. The single source file is downloaded once and filtered locally with
-DuckDB to regular-season batted balls that have a measured exit velocity, launch
+DuckDB to regular-season and postseason batted balls that have a measured exit velocity, launch
 angle, and Statcast hit distance. The mirror stops at 2025-09-22, so **2026 is
 pulled directly from Baseball Savant** through a fast batted-ball-filtered CSV
 endpoint and merged. The full pool is **2,522,038 batted balls, 2015 through
@@ -95,7 +94,7 @@ These targets were fixed in advance, from an independent pass over the 2015 to
 2025 Statcast data. The pipeline reproduces them exactly on the 2015-2025
 subset, which confirms the pull, filter, and carry definition match the
 reference. The gate stays pinned to 2015-2025 as a checkpoint; the reported
-empirical estimate uses the full 2015-2026 pool of regular season plus postseason (n = 279, mean 319.2 ft, 33
+empirical estimate uses the full 2015-2026 pool of regular season plus postseason (n = 280, mean 319.2 ft, 33
 cleared, 11.8%, Wilson 8.5 to 16.1%).
 
 | metric (2015-2025 subset) | target | this repo |
@@ -114,9 +113,9 @@ cleared, 11.8%, Wilson 8.5 to 16.1%).
 Pool every comparable batted ball and read the carry distribution straight off
 the data. Reported at the exact gate window and at widening windows around
 105.3 / 49, plus a Gaussian-kernel-weighted estimate centered exactly on the
-France profile so the estimate is not forced into a bin. This is the most direct
-possible evidence: balls like this one, how far did they actually go, none of
-which hit a cable.
+France profile so the estimate is not forced into a bin. No model stands between
+the question and the answer: balls like this one, how far they actually went,
+none of which hit a cable.
 
 ### Method 2: calibrated drag-plus-Magnus physics
 
@@ -166,7 +165,7 @@ honest.
 
 ### The swing and the spin
 
-Statcast never publishes a batted ball's spin, but since 2023 it has tracked the
+Statcast never publishes a batted ball's spin, but since 2024 it has tracked the
 bat, and France's swing is on record (`game_pk` 849830): a **75.8 mph** barrel on
 a **21.9 degree** uppercut, against a 98.9 mph fastball. The ball left at 49
 degrees, so the bat undercut it by about **27 degrees**, a backspin-heavy contact.
@@ -182,11 +181,11 @@ degrees, so the bat undercut it by about **27 degrees**, a backspin-heavy contac
   angle, carry rises about **1.5 ft per degree** of attack angle. A steeper swing
   to the same launch means less undercut, so less of the backspin that fights a
   steeply climbing ball. France's 21.9 degree attack is above the comparable
-  median (18.7 degrees), so his real swing actually nudges the estimate up, not
-  down: the bat-tracking model lands 320 ft (vs 317 ft for a typical swing) and
-  reaches 344 about 8.5% of the time. The big uppercut is simply how a ball gets
-  to 49 degrees; it did not cost him distance. The 49 degree launch itself is why
-  it lands short.
+  median (18.7 degrees), so his real swing raises the estimate a little: the
+  bat-tracking model lands 320 ft (vs 317 ft for a typical swing) and reaches 344
+  about 8.5% of the time. Reaching 49 degrees with a steeper swing takes less
+  undercut, so the uppercut did not cost him distance. The 49 degree launch
+  itself is why it lands short.
 
 ## The air it was hit in
 
@@ -205,7 +204,8 @@ This buys two things.
 as exit velocity and launch angle, so its coefficients no longer absorb the
 altitude mix (Coors and the high parks used to inflate them). The same France
 ball carries **318 ft in the Milwaukee dome but 344 ft at Coors Field air
-density**: altitude alone would have made it a home run. See
+density**: enough to reach the 344 ft foul line, though still short of the 348 ft
+wall at the France line, so not quite a home run even then. See
 `figures/density_effect.png`.
 
 **Wind, measured instead of guessed.** Regressing the carry residual on the
@@ -249,7 +249,7 @@ resampling thins the sparse high-angle tail.
 Reading across methods, the central carry clusters at 318 to 321 ft and the raw
 P(reach 344) spans about 5 to 14%. The empirical pool (11.8%) and the physics
 model (10.9%), the two estimators grounded directly in the ball's real
-conditions, land near 12%; the machine-learning models sit a few points lower.
+conditions, land at 11 and 12 percent; the machine-learning models sit a few points lower.
 
 ## Figures
 
@@ -268,7 +268,7 @@ All saved to `figures/`:
 - `park_wall_map.png`: a top-down map of American Family Field wall distance by
   spray angle, with the France line marked.
 - `density_effect.png`: the France ball's carry across air densities, marking the
-  dome, cold sea level, and Coors Field (where it clears 344).
+  dome, cold sea level, and Coors Field (where it reaches 344, still short of the 348 ft wall).
 
 ## Limitations
 
