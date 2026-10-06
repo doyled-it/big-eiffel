@@ -50,9 +50,11 @@ def main() -> None:
 
     # ---------------------------------------------------------------
     banner("METHOD 1: EMPIRICAL POOLING")
-    # The validation gate is pinned to 2015-2025 (the established baseline that
-    # proved the pipeline). The reported empirical estimate uses the full pool.
-    df_2025 = df[df.game_year <= 2025]
+    # The validation gate is pinned to regular-season 2015-2025 (the established
+    # baseline that proved the pipeline). The reported empirical estimate, and
+    # the rest of the France analysis, use the full pool: regular season plus
+    # postseason, 2015-2026.
+    df_2025 = df[(df.game_type == "R") & (df.game_year <= 2025)]
     gatev = E.window_stats(df_2025, C.GATE_EV_LO, C.GATE_EV_HI, C.GATE_LA_LO, C.GATE_LA_HI, label="gate-2025")
     gate_ok = (
         gatev.n == C.GATE_N
@@ -125,11 +127,7 @@ def main() -> None:
         print(f"  {tf} F: carry={pt.carry_ft:.1f} ft")
 
     # Per-ball spin scatter: carry spread of comparable balls at near-dome conditions.
-    near = df[
-        df.launch_speed.between(103, 107)
-        & df.launch_angle.between(47, 51)
-        & df.air_density.between(1.14, 1.19)
-    ]
+    near = df[df.launch_speed.between(103, 107) & df.launch_angle.between(47, 51) & df.air_density.between(1.14, 1.19)]
     spin_sigma = float(near.hit_distance_sc.std()) if len(near) >= 30 else 20.0
     print(f"spin scatter at France profile (near-dome conditions, n={len(near)}): {spin_sigma:.1f} ft")
     sens = P.sensitivity_mc(fit, spin_sigma_ft=spin_sigma)

@@ -146,7 +146,13 @@ def test_validation_gate():
     import pandas as pd
 
     df = pd.read_parquet(C.RAW_PARQUET)
-    m = df.launch_speed.between(C.GATE_EV_LO, C.GATE_EV_HI) & df.launch_angle.between(C.GATE_LA_LO, C.GATE_LA_HI)
+    # The gate is pinned to regular-season 2015-2025; the pool also holds postseason.
+    m = (
+        (df.game_type == "R")
+        & (df.game_year <= 2025)
+        & df.launch_speed.between(C.GATE_EV_LO, C.GATE_EV_HI)
+        & df.launch_angle.between(C.GATE_LA_LO, C.GATE_LA_HI)
+    )
     carry = df.loc[m, "hit_distance_sc"].to_numpy(float)
     assert carry.size == C.GATE_N
     assert round(float(carry.mean()), 1) == C.GATE_MEAN

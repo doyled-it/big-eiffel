@@ -130,7 +130,7 @@ def fetch_mlb_games(start_year: int = 2015, end_year: int = 2026, force: bool = 
             "sportId": 1,
             "startDate": f"{year}-03-01",
             "endDate": f"{year}-11-30",
-            "gameType": "R",
+            "gameType": "R,F,D,L,W",
             "hydrate": "weather,venue(location,fieldInfo)",
         }
         r = requests.get(MLB_SCHEDULE, params=params, timeout=120, headers=UA)

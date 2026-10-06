@@ -32,6 +32,12 @@ SAMPLE_PARQUET = DATA / "batted_balls_sample.parquet"  # small committed sample
 # filters to batted balls server-side).
 SAVANT_CSV = "https://baseballsavant.mlb.com/statcast_search/csv"
 
+# Game types kept in the pool: regular season plus the four postseason rounds
+# (wild card, division, league championship, world series). Spring training (S),
+# exhibition (E), and all-star (A) are excluded. The France analysis filters
+# this down to regular season; the published dataset keeps all of these.
+GAME_TYPES = ("R", "F", "D", "L", "W")
+
 # --------------------------------------------------------------------------
 # Data source
 # --------------------------------------------------------------------------

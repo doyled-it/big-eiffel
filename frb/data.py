@@ -59,7 +59,7 @@ def _filter_local(source_path: str) -> pd.DataFrame:
         SELECT {cols},
                degrees(atan2(hc_x - {C.HC_X0}, {C.HC_Y0} - hc_y)) AS spray_deg
         FROM read_parquet('{source_path}')
-        WHERE game_type = 'R'
+        WHERE game_type IN ('R', 'F', 'D', 'L', 'W')
           AND launch_speed IS NOT NULL
           AND launch_angle IS NOT NULL
           AND hit_distance_sc IS NOT NULL
@@ -118,7 +118,7 @@ def pull_raw_pybaseball(force: bool = False) -> pd.DataFrame:
     for year in range(2015, 2026):
         print(f"[data] pybaseball statcast {year} ...")
         part = statcast(start_dt=f"{year}-03-01", end_dt=f"{year}-11-30")
-        part = part[part["game_type"] == "R"]
+        part = part[part["game_type"].isin(C.GAME_TYPES)]
         part = part.dropna(subset=["launch_speed", "launch_angle", "hit_distance_sc"])
         keep = [c for c in C.PULL_COLUMNS if c in part.columns]
         part = part[keep].copy()
@@ -157,7 +157,7 @@ def pull_savant_batted(start_dt: str, end_dt: str, window_days: int = 18) -> pd.
         w_end = min(cur + pd.Timedelta(days=window_days - 1), end)
         params = {
             "all": "true",
-            "hfGT": "R|",
+            "hfGT": "R|PO|",
             "hfBBT": "fly_ball|ground_ball|line_drive|popup|",
             "player_type": "batter",
             "game_date_gt": cur.strftime("%Y-%m-%d"),
@@ -181,7 +181,7 @@ def pull_savant_batted(start_dt: str, end_dt: str, window_days: int = 18) -> pd.
         cur = w_end + pd.Timedelta(days=1)
     df = pd.concat(frames, ignore_index=True)
     if "game_type" in df.columns:
-        df = df[df["game_type"] == "R"]
+        df = df[df["game_type"].isin(C.GAME_TYPES)]
     # Coerce numeric columns (empty windows can promote a column to object dtype).
     for col in ["launch_speed", "launch_angle", "hit_distance_sc", "hc_x", "hc_y"]:
         if col in df.columns:
