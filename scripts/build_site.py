@@ -11,6 +11,7 @@ Usage:
 from __future__ import annotations
 
 import json
+import shutil
 from pathlib import Path
 
 from frb import config as C
@@ -45,6 +46,13 @@ def main() -> None:
     out = SITE / "index.html"
     out.write_text(html)
     print(f"wrote {out} ({len(html):,} bytes)")
+
+    # Copy static assets referenced by the page (the favicon) into the site.
+    for asset in ("favicon.svg",):
+        src = ROOT / "web" / asset
+        if src.exists():
+            shutil.copy(src, SITE / asset)
+            print(f"copied {asset}")
 
 
 if __name__ == "__main__":
