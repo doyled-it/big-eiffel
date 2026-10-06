@@ -15,12 +15,12 @@ The ball most likely would not have gone out, but it was far from hopeless.
 - **Expected carry was about 318 to 320 ft**, roughly 25 ft short of the 344 ft
   fence. The empirical mean is 320 ft, the physics model gives 318 ft, and the
   ML models give 316 to 323 ft.
-- There was about a **1-in-8 chance (12.1%, plausibly 9 to 16%)** of carrying
-  the raw 344 ft on the ground, measured directly from 273 real balls hit at the
+- There was about a **1-in-8 chance (11.8%, plausibly 9 to 16%)** of carrying
+  the raw 344 ft on the ground, measured directly from 279 regular-season and postseason balls hit at the
   same speed and angle over 2015 to 2026. The physics model, now fit to each
-  ball's actual air density, independently agrees at 11.1%.
-- Across methods the raw number spans about 5 to 14%. The two most directly
-  grounded estimators, the empirical pool (12.1%) and the physics model (11.1%),
+  ball's actual air density, independently agrees at 10.9%.
+- Across methods the raw number spans about 6 to 14%. The two most directly
+  grounded estimators, the empirical pool (11.8%) and the physics model (10.9%),
   land near 12%; the machine-learning models sit lower, around 5 to 7%.
 - That falls to roughly **5 to 7%** once you also require the ball to clear the
   8 ft wall while staying fair, rather than just reach the fence distance along
@@ -63,7 +63,7 @@ Savant. The single source file is downloaded once and filtered locally with
 DuckDB to regular-season batted balls that have a measured exit velocity, launch
 angle, and Statcast hit distance. The mirror stops at 2025-09-22, so **2026 is
 pulled directly from Baseball Savant** through a fast batted-ball-filtered CSV
-endpoint and merged. The full pool is **2,487,293 batted balls, 2015 through
+endpoint and merged. The full pool is **2,522,038 batted balls, 2015 through
 2026**.
 
 Every ball is then joined to the conditions it was hit in (roof state, air
@@ -86,8 +86,8 @@ These targets were fixed in advance, from an independent pass over the 2015 to
 2025 Statcast data. The pipeline reproduces them exactly on the 2015-2025
 subset, which confirms the pull, filter, and carry definition match the
 reference. The gate stays pinned to 2015-2025 as a checkpoint; the reported
-empirical estimate uses the full 2015-2026 pool (n = 273, mean 319.5 ft, 33
-cleared, 12.1%, Wilson 8.7 to 16.5%).
+empirical estimate uses the full 2015-2026 pool of regular season plus postseason (n = 279, mean 319.2 ft, 33
+cleared, 11.8%, Wilson 8.5 to 16.1%).
 
 | metric (2015-2025 subset) | target | this repo |
 |---|---|---|
@@ -126,7 +126,7 @@ conditions (about 72 F, elevation 193 m, no wind), giving a central carry of
 **317.8 ft** (about 26 ft short of 344). The uncertainty comes from a Monte
 Carlo over temperature (60 to 80 F) and the unmeasured backspin, whose per-ball
 carry scatter (about 23 ft) is measured from comparable balls at near-identical
-conditions. That yields a physics P(clear 344) of 11.1%, now in line with the
+conditions. That yields a physics P(clear 344) of 10.9%, now in line with the
 empirical estimate rather than a weaker cross-check.
 
 An earlier lift-only version of this model overshot the steep 36 to 44 degree
@@ -190,26 +190,26 @@ empirical counts.
 
 | method | central carry (ft) | generic 344 raw | generic 344 + 8ft wall | Milwaukee park raw | Milwaukee park + 8ft wall |
 |---|---|---|---|---|---|
-| Method 1 empirical (2015-2026 pool, n=273) | 320 | 12.1% [8.7, 16.5] | 8.8% [6.0, 12.7] | 8.8% [6.0, 12.7] | 6.6% [4.2, 10.2] |
+| Method 1 empirical (2015-2026 pool, n=279) | 319 | 11.8% [8.5, 16.1] | 8.6% [5.8, 12.5] | 8.6% [5.8, 12.5] | 6.5% [4.1, 10.0] |
 | Method 1 kernel (sigma 1.5) | 320 | 14.2% | | | |
-| Method 2 physics (sensitivity MC) | 318 | 11.1% | 8.1% | 7.5% | 6.0% |
-| Method 3 ML direct | 323 | 7.4% | 6.3% | 6.0% | 5.0% |
-| Method 3 ML physics-residual | 320 | 5.3% | 5.0% | 5.0% | 5.0% |
-| Method 3 ML + bat-tracking (2024+) | 316 | 6.8% | 6.1% | 5.9% | 5.1% |
+| Method 2 physics (sensitivity MC) | 318 | 10.9% | 8.1% | 7.5% | 5.9% |
+| Method 3 ML direct | 322 | 8.0% | 6.8% | 6.5% | 5.3% |
+| Method 3 ML physics-residual | 319 | 6.1% | 5.0% | 5.0% | 5.0% |
+| Method 3 ML + bat-tracking (2024+) | 317 | 7.4% | 6.5% | 6.3% | 5.3% |
 
 The physics central carry (318 ft) is the dome point estimate; its four
 probabilities come from the temperature-and-spin Monte Carlo sweep.
 
 At the France spray angle the wall is 348 ft, four feet deeper than the 344 ft
 foul-line minimum. So reaching the Milwaukee wall on the ground (8.8%) is a
-little harder than reaching a flat 344 ft (12.1%), and clearing the 8 ft wall
+little harder than reaching a flat 344 ft (11.8%), and clearing the 8 ft wall
 there brings it to 6.6%. The machine-learning uncertainty is best read as the
 spread across the methods; a naive bootstrap would understate it, since
 resampling thins the sparse high-angle tail.
 
 Reading across methods, the central carry clusters at 316 to 323 ft and the raw
-P(reach 344) spans about 5 to 14%. The empirical pool (12.1%) and the physics
-model (11.1%), the two estimators grounded directly in the ball's real
+P(reach 344) spans about 6 to 14%. The empirical pool (11.8%) and the physics
+model (10.9%), the two estimators grounded directly in the ball's real
 conditions, land near 12%; the machine-learning models sit a few points lower.
 
 ## Figures
@@ -219,7 +219,7 @@ All saved to `figures/`:
 - `carry_vs_launch_angle.png`: empirical mean carry against the fitted physics
   curve, which now tracks the data across the whole range, peak near 30 degrees
   through the steep decline past 45.
-- `france_carry_distribution.png`: the carry distribution of the 273 comparable
+- `france_carry_distribution.png`: the carry distribution of the 279 comparable
   balls, with the 344 ft line and the cleared fraction marked.
 - `ml_predictive_distribution.png`: the LightGBM predictive carry CDF at the
   France input, with P(carry >= 344) read off the tail.
