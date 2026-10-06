@@ -185,6 +185,14 @@ def main() -> None:
             f"France's {C.FRANCE_ATTACK_ANGLE} deg -> {attack_slope['carry_at_france_attack']} ft vs "
             f"{attack_slope['carry_at_median_attack']} ft at the band median {attack_slope['median_attack_deg']} deg"
         )
+    collision = SP.collision_carry_model(df, fit)
+    if collision:
+        print(
+            f"collision model: the swing explains {collision['variance_explained'] * 100:.0f}% of the carry scatter "
+            f"(residual {collision['resid_std_before_ft']} -> {collision['resid_std_after_ft']} ft); "
+            f"France carry {collision['france_carry_ft']} ft, band {collision['p05_ft']}-{collision['p95_ft']} ft "
+            f"(v_rel_t {collision['france_vrel_t_mph']} vs pool mean {collision['pool_mean_vrel_t_mph']})"
+        )
     spin_rng = (spin_geo["spin_estimate_rpm_lo"], spin_geo["spin_estimate_rpm_hi"])
 
     # ---------------------------------------------------------------
@@ -331,6 +339,7 @@ def main() -> None:
             },
             "collision": spin_geo,
             "empirical_attack_slope": attack_slope,
+            "collision_carry_model": collision,
         },
         "ml": {
             "direct": {

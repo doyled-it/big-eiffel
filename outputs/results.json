@@ -333,6 +333,19 @@
         46.0,
         52.0
       ]
+    },
+    "collision_carry_model": {
+      "n": 1349,
+      "resid_std_before_ft": 20.0,
+      "resid_std_after_ft": 19.3,
+      "variance_explained": 0.068,
+      "slope_ft_per_mph": -0.55,
+      "france_vrel_t_mph": 94.5,
+      "pool_mean_vrel_t_mph": 96.4,
+      "france_carry_ft": 315.2,
+      "france_adjustment_ft": -2.6,
+      "p05_ft": 283.5,
+      "p95_ft": 346.9
     }
   },
   "ml": {

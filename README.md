@@ -186,6 +186,15 @@ degrees, so the bat undercut it by about **27 degrees**, a backspin-heavy contac
   about 8.5% of the time. Reaching 49 degrees with a steeper swing takes less
   undercut, so the uppercut did not cost him distance. The 49 degree launch
   itself is why it lands short.
+- **Can the swing tighten the band?** Barely. `collision_carry_model` regresses
+  the carry residual (measured minus physics) on the collision spin-driver for
+  2024+ comparable balls: the swing explains only about **7%** of the carry
+  scatter (residual std 20.0 to 19.3 ft), because the spread at a fixed launch is
+  set by the exact contact point, which bat tracking does not see. France's
+  spin-driver (94.5) is essentially the pool average (96.4), so his backspin was
+  about typical for a 49 degree ball despite the dramatic uppercut. The one lever
+  that would tighten this is a measured spin, which Hawk-Eye (and TrackMan)
+  capture but MLB does not publish.
 
 ## The air it was hit in
 
@@ -277,9 +286,12 @@ All saved to `figures/`:
    launch into more or less carry, and at a 49 degree launch it can push the ball
    back on the long ascent. For this ball the measured swing lets us bound it
    (about 1,600 to 2,600 rpm from the collision geometry) and the bat-tracking
-   model conditions on the real contact, but a bound is not a measurement. This is
-   why the output is still a distribution, not a point, and why the methods
-   disagree by a few points. Bat tracking also only exists from 2024 on.
+   model conditions on the real contact, but a bound is not a measurement. A
+   collision model built from the swing tightens the carry band almost not at all
+   (the swing explains ~7% of the scatter), so the output is a distribution, not a
+   point. The real flight was tracked by Hawk-Eye up to the cable, but those
+   positions and any measured spin stay with MLB rather than in the public feed.
+   Bat tracking also only exists from 2024 on.
 2. **Statcast hit distance is a projection.** `hit_distance_sc` is Statcast's
    modeled flight distance, not a surveyed landing point, and carries its own
    error. The wind analysis suggests it is also largely wind-neutralized.
