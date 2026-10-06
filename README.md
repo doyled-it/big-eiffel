@@ -21,7 +21,7 @@ The ball most likely would not have gone out, but it was far from hopeless.
   ball's actual air density, independently agrees at 10.9%.
 - Across methods the raw number spans about 6 to 14%. The two most directly
   grounded estimators, the empirical pool (11.8%) and the physics model (10.9%),
-  land near 12%; the machine-learning models sit lower, around 5 to 7%.
+  land near 12%; the machine-learning models, which condition on the exact dome air, sit lower at around 5 to 8%.
 - That falls to roughly **5 to 7%** once you also require the ball to clear the
   8 ft wall while staying fair, rather than just reach the fence distance along
   the ground. The empirical estimate there is 6.6% (Wilson 4 to 10%).
@@ -138,11 +138,15 @@ LightGBM quantile regression (not deep learning, since this is low-dimensional
 tabular data), built two ways:
 
 - **Direct**: predict the carry distribution from exit velocity, launch angle,
-  spray angle, season, and park, fitting several quantiles to get a predictive
-  distribution.
+  spray angle, air density, along-flight wind, season, and park, fitting several
+  quantiles to get a predictive distribution. The weather features mean this is
+  the one method that sees the exact conditions: France is predicted at the
+  dome's real air density with no wind, which pulls its estimate below the
+  all-conditions rate (the comparable balls that reached 344 were often helped
+  by warm or thin air the closed roof did not have).
 - **Physics-informed residual**: predict the residual between measured carry and
   the physics-model carry, then add it back. This anchors the model in physics
-  and lets the trees learn the park, spray, and era corrections.
+  and lets the trees learn the park, spray, era, and conditions corrections.
 
 A 2024+ variant adds the bat-tracking fields (attack angle, swing path tilt, bat
 speed, swing length) as a partial spin proxy. All models are checked for
@@ -193,9 +197,9 @@ empirical counts.
 | Method 1 empirical (2015-2026 pool, n=279) | 319 | 11.8% [8.5, 16.1] | 8.6% [5.8, 12.5] | 8.6% [5.8, 12.5] | 6.5% [4.1, 10.0] |
 | Method 1 kernel (sigma 1.5) | 320 | 14.2% | | | |
 | Method 2 physics (sensitivity MC) | 318 | 10.9% | 8.1% | 7.5% | 5.9% |
-| Method 3 ML direct | 322 | 8.0% | 6.8% | 6.5% | 5.3% |
-| Method 3 ML physics-residual | 319 | 6.1% | 5.0% | 5.0% | 5.0% |
-| Method 3 ML + bat-tracking (2024+) | 317 | 7.4% | 6.5% | 6.3% | 5.3% |
+| Method 3 ML direct | 323 | 5.9% | 5.0% | 5.0% | 5.0% |
+| Method 3 ML physics-residual | 322 | 5.0% | 5.0% | 5.0% | 5.0% |
+| Method 3 ML + bat-tracking (2024+) | 316 | 8.4% | 7.5% | 7.3% | 6.4% |
 
 The physics central carry (318 ft) is the dome point estimate; its four
 probabilities come from the temperature-and-spin Monte Carlo sweep.

@@ -26,7 +26,7 @@ from scipy.interpolate import RegularGridInterpolator
 from . import config as C
 from . import physics as P
 
-FEATURES = ["launch_speed", "launch_angle", "spray_deg", "game_year", "home_team"]
+FEATURES = ["launch_speed", "launch_angle", "spray_deg", "air_density", "wind_along_mph", "game_year", "home_team"]
 CAT_FEATURES = ["home_team"]
 BAT_FEATURES = ["attack_angle", "swing_path_tilt", "bat_speed", "swing_length"]
 QUANTILES = [0.05, 0.1, 0.25, 0.5, 0.75, 0.8, 0.85, 0.9, 0.95]
@@ -59,13 +59,15 @@ def prep_model_frame(df: pd.DataFrame) -> pd.DataFrame:
     cols = list(dict.fromkeys(FEATURES + BAT_FEATURES + ["hit_distance_sc"]))
     cols = [c for c in cols if c in df.columns]
     out = df[cols].copy()
-    out = out.dropna(subset=["launch_speed", "launch_angle", "spray_deg", "hit_distance_sc", "home_team", "game_year"])
+    out = out.dropna(subset=["launch_speed", "launch_angle", "spray_deg", "air_density", "hit_distance_sc", "home_team", "game_year"])
+    if "wind_along_mph" in out.columns:
+        out["wind_along_mph"] = out["wind_along_mph"].fillna(0.0)
     out = out[out.hit_distance_sc.between(0, 520) & out.launch_angle.between(-90, 90) & out.spray_deg.between(-70, 70)]
     out["home_team"] = out["home_team"].astype("category")
     return out
 
 
-def france_row(park_categories, year: int = 2025) -> pd.DataFrame:
+def france_row(park_categories, year: int = 2026) -> pd.DataFrame:
     """One-row frame of the France inputs with a park-matched categorical."""
     row = pd.DataFrame(
         [
@@ -73,6 +75,9 @@ def france_row(park_categories, year: int = 2025) -> pd.DataFrame:
                 "launch_speed": C.FRANCE_EV,
                 "launch_angle": C.FRANCE_LA,
                 "spray_deg": C.FRANCE_SPRAY,
+                # The dome: still air at the closed-roof air density.
+                "air_density": float(P.rho(C.DOME_TEMP_F, C.DOME_ELEV_M, C.DOME_RH)),
+                "wind_along_mph": 0.0,
                 "game_year": year,
                 "home_team": C.FRANCE_PARK,
             }
