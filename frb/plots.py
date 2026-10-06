@@ -292,16 +292,8 @@ def plot_trajectory_profile(
         arrowprops=dict(arrowstyle="->", color="#333", lw=1),
     )
 
-    # Catch marker.
-    ax.plot(catch, 3, "o", color="#6a6a6a", ms=6)
-    ax.annotate(
-        "caught in deep left,\nshort of the fence",
-        xy=(catch, 3),
-        xytext=(catch - 120, 56),
-        fontsize=9,
-        color="#444",
-        arrowprops=dict(arrowstyle="->", color="#888", lw=1),
-    )
+    # Catch marker: where the clipped ball came down (deep left, short).
+    ax.plot(catch, 3, "o", color=INK, ms=6)
 
     # Shortfall from the free-flight landing to the fence.
     ax.annotate("", xy=(C.FENCE_FT, 27), xytext=(land, 27), arrowprops=dict(arrowstyle="<->", color=GREEN, lw=1.4))
