@@ -22,8 +22,15 @@ for _d in (DATA, FIGURES, OUTPUTS):
     _d.mkdir(exist_ok=True)
 
 # Cached data products.
-RAW_PARQUET = DATA / "batted_balls.parquet"  # full filtered pull (gitignored)
+RAW_PARQUET = DATA / "batted_balls.parquet"  # 2015-2025 HF pull (gitignored)
+BALLS_2026_PARQUET = DATA / "batted_balls_2026.parquet"  # 2026 Savant pull (gitignored)
+ENRICHED_PARQUET = DATA / "batted_balls_weather.parquet"  # 2015-2026 + weather (gitignored)
+MLB_GAMES_PARQUET = DATA / "mlb_games.parquet"  # per-game weather/roof/venue (gitignored)
 SAMPLE_PARQUET = DATA / "batted_balls_sample.parquet"  # small committed sample
+
+# Direct Baseball Savant CSV endpoint (faster than day-by-day pybaseball, and
+# filters to batted balls server-side).
+SAVANT_CSV = "https://baseballsavant.mlb.com/statcast_search/csv"
 
 # --------------------------------------------------------------------------
 # Data source
@@ -39,6 +46,9 @@ HF_GLOB = "hf://datasets/Jensen-holm/statcast-era-pitches@~parquet/**/*.parquet"
 # swing_path_tilt, bat_speed, swing_length) only exist from 2024 on.
 PULL_COLUMNS = [
     "game_year",
+    "game_date",
+    "game_pk",
+    "sv_id",
     "game_type",
     "home_team",
     "events",

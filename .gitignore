@@ -6,9 +6,11 @@ __pycache__/
 .pytest_cache/
 .ipynb_checkpoints/
 
-# Large cached data (committed: the small sample + aggregated outputs)
+# Large cached data (committed: the small samples + aggregated outputs)
 data/*.parquet
 !data/batted_balls_sample.parquet
+!data/batted_balls_weather_sample.parquet
+data/DATASET_CARD.md
 
 # Transient logs
 outputs/*_log.txt

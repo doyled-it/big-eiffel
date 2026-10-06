@@ -131,6 +131,92 @@ def pull_raw_pybaseball(force: bool = False) -> pd.DataFrame:
     return df
 
 
+def pull_savant_batted(start_dt: str, end_dt: str, window_days: int = 18) -> pd.DataFrame:
+    """Pull batted balls directly from the Baseball Savant CSV endpoint.
+
+    Faster than day-by-day pybaseball: the endpoint filters to batted-ball types
+    server side, so each multi-day window transfers only the balls in play. The
+    endpoint truncates a single query at 25000 rows, so windows are kept small.
+
+    Arguments:
+        start_dt: Start date (YYYY-MM-DD).
+        end_dt: End date (YYYY-MM-DD).
+        window_days: Days per request window.
+
+    Returns:
+        A filtered batted-ball DataFrame with the same schema as the HF pull.
+    """
+    import io
+
+    import requests
+
+    frames = []
+    cur = pd.Timestamp(start_dt)
+    end = pd.Timestamp(end_dt)
+    while cur <= end:
+        w_end = min(cur + pd.Timedelta(days=window_days - 1), end)
+        params = {
+            "all": "true",
+            "hfGT": "R|",
+            "hfBBT": "fly_ball|ground_ball|line_drive|popup|",
+            "player_type": "batter",
+            "game_date_gt": cur.strftime("%Y-%m-%d"),
+            "game_date_lt": w_end.strftime("%Y-%m-%d"),
+            "min_pitches": "0",
+            "min_results": "0",
+            "type": "details",
+            "sort_col": "pitches",
+            "player_event_sort": "api_p_release_speed",
+            "sort_order": "desc",
+            "min_pas": "0",
+        }
+        r = requests.get(C.SAVANT_CSV, params=params, timeout=180, headers={"User-Agent": "Mozilla/5.0"})
+        r.raise_for_status()
+        part = pd.read_csv(io.StringIO(r.text))
+        if len(part) >= 25000:
+            print(f"[data] WARNING: window {cur.date()}..{w_end.date()} hit the 25000 row cap; shrink window_days")
+        print(f"[data] savant {cur.date()}..{w_end.date()}: {len(part):,} batted balls")
+        if len(part):
+            frames.append(part)
+        cur = w_end + pd.Timedelta(days=1)
+    df = pd.concat(frames, ignore_index=True)
+    if "game_type" in df.columns:
+        df = df[df["game_type"] == "R"]
+    # Coerce numeric columns (empty windows can promote a column to object dtype).
+    for col in ["launch_speed", "launch_angle", "hit_distance_sc", "hc_x", "hc_y"]:
+        if col in df.columns:
+            df[col] = pd.to_numeric(df[col], errors="coerce")
+    df = df.dropna(subset=["launch_speed", "launch_angle", "hit_distance_sc"])
+    keep = [c for c in C.PULL_COLUMNS if c in df.columns]
+    out = df[keep].copy()
+    for c in C.PULL_COLUMNS:
+        if c not in out.columns:
+            out[c] = np.nan
+    out["spray_deg"] = spray_angle(out["hc_x"], out["hc_y"])
+    return out[C.PULL_COLUMNS + ["spray_deg"]]
+
+
+def pull_2026(force: bool = False) -> pd.DataFrame:
+    """Pull and cache the 2026 regular season (not in the HF mirror yet)."""
+    if C.BALLS_2026_PARQUET.exists() and not force:
+        print(f"[data] using cached {C.BALLS_2026_PARQUET}")
+        return pd.read_parquet(C.BALLS_2026_PARQUET)
+    df = pull_savant_batted("2026-03-15", "2026-10-01")
+    df.to_parquet(C.BALLS_2026_PARQUET, index=False)
+    print(f"[data] cached {len(df):,} 2026 batted balls to {C.BALLS_2026_PARQUET}")
+    return df
+
+
+def load_full() -> pd.DataFrame:
+    """Load the full 2015-2026 batted-ball pool (HF 2015-2025 plus Savant 2026)."""
+    frames = [pd.read_parquet(C.RAW_PARQUET)]
+    if C.BALLS_2026_PARQUET.exists():
+        frames.append(pd.read_parquet(C.BALLS_2026_PARQUET))
+    df = pd.concat(frames, ignore_index=True)
+    df["game_date"] = pd.to_datetime(df["game_date"])
+    return df
+
+
 def _write_sample(df: pd.DataFrame, n: int = 5000, seed: int = 0) -> None:
     """Write a small, committable sample of the data for repo browsing."""
     sample = df.sample(n=min(n, len(df)), random_state=seed).sort_index()
@@ -159,9 +245,10 @@ def load(sample_ok: bool = False) -> pd.DataFrame:
 
 
 if __name__ == "__main__":
-    use_fallback = "--pybaseball" in sys.argv
     force = "--force" in sys.argv
-    if use_fallback:
+    if "--2026" in sys.argv:
+        pull_2026(force=force)
+    elif "--pybaseball" in sys.argv:
         pull_raw_pybaseball(force=force)
     else:
         pull_raw(force=force)
