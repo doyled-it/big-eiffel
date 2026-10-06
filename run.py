@@ -16,13 +16,13 @@ import time
 import numpy as np
 
 from frb import config as C
-from frb import data as D
 from frb import empirical as E
 from frb import geometry as G
 from frb import ml as ML
 from frb import physics as P
 from frb import plots as PL
 from frb import report as R
+from frb import weather as W
 
 
 def banner(msg: str) -> None:
@@ -41,28 +41,37 @@ def main() -> None:
     t0 = time.time()
 
     banner("DATA")
-    df = D.pull_raw(force=args.force_pull)
-    print(f"batted balls: {len(df):,}  seasons {df.game_year.min()}-{df.game_year.max()}")
+    df = W.build_enriched()
+    print(f"batted balls: {len(df):,}  seasons {int(df.game_year.min())}-{int(df.game_year.max())}  (weather-enriched)")
+    print(f"roof-closed: {df.roof_closed.mean():.1%}  mean air density: {df.air_density.mean():.4f} kg/m^3")
     if args.smoke:
         df = df.sample(n=min(250_000, len(df)), random_state=0).reset_index(drop=True)
         print(f"[smoke] subsampled to {len(df):,} rows (gate assert disabled)")
 
     # ---------------------------------------------------------------
     banner("METHOD 1: EMPIRICAL POOLING")
-    gate = E.window_stats(df, C.GATE_EV_LO, C.GATE_EV_HI, C.GATE_LA_LO, C.GATE_LA_HI, label="gate")
+    # The validation gate is pinned to 2015-2025 (the established baseline that
+    # proved the pipeline). The reported empirical estimate uses the full pool.
+    df_2025 = df[df.game_year <= 2025]
+    gatev = E.window_stats(df_2025, C.GATE_EV_LO, C.GATE_EV_HI, C.GATE_LA_LO, C.GATE_LA_HI, label="gate-2025")
     gate_ok = (
-        gate.n == C.GATE_N
-        and round(gate.mean_carry, 1) == C.GATE_MEAN
-        and round(gate.median_carry, 1) == C.GATE_MEDIAN
-        and gate.k_clear == C.GATE_CLEAR_344
+        gatev.n == C.GATE_N
+        and round(gatev.mean_carry, 1) == C.GATE_MEAN
+        and round(gatev.median_carry, 1) == C.GATE_MEDIAN
+        and gatev.k_clear == C.GATE_CLEAR_344
     )
     print(
-        f"GATE n={gate.n} mean={gate.mean_carry:.1f} median={gate.median_carry:.1f} "
-        f"k>=344={gate.k_clear} frac={gate.frac_clear:.4f} "
-        f"CI=[{gate.ci_low:.3f},{gate.ci_high:.3f}]  -> {'PASS' if gate_ok else 'FAIL'}"
+        f"GATE (2015-2025 checkpoint) n={gatev.n} mean={gatev.mean_carry:.1f} median={gatev.median_carry:.1f} "
+        f"k>=344={gatev.k_clear} -> {'PASS' if gate_ok else 'FAIL'}"
     )
     if not args.smoke:
         assert gate_ok, "Validation gate failed: data or filter bug."
+
+    gate = E.window_stats(df, C.GATE_EV_LO, C.GATE_EV_HI, C.GATE_LA_LO, C.GATE_LA_HI, label="gate")
+    print(
+        f"empirical (2015-2026 pool) n={gate.n} mean={gate.mean_carry:.1f} median={gate.median_carry:.1f} "
+        f"k>=344={gate.k_clear} frac={gate.frac_clear:.4f} CI=[{gate.ci_low:.3f},{gate.ci_high:.3f}]"
+    )
 
     windows = E.windows_table(df)
     print("\nwidening windows:")
@@ -91,11 +100,15 @@ def main() -> None:
     # ---------------------------------------------------------------
     banner("METHOD 2: PHYSICS TRAJECTORY MODEL")
     fit = P.fit_lift_curve(df)
-    print(f"lift fit RMSE (count-weighted) = {fit.rmse():.2f} ft")
+    print(
+        f"density-aware fit: {fit.density_aware}  grid bins: {len(fit.grid_obs)}  pool-mean density: {fit.rho_fit:.4f}"
+    )
+    print(f"fit RMSE = {fit.rmse():.2f} ft")
     print("effective Cl knots:", {int(a): round(float(c), 3) for a, c in zip(fit.knot_la, fit.knot_cl)})
-    rho_mlb = P.rho(C.MLB_TEMP_F, C.MLB_ELEV_M, C.MLB_RH)
+    print("effective drag kd knots:", {int(a): round(float(c), 3) for a, c in zip(fit.knot_la, fit.knot_kd)})
+    rho_ref = fit.rho_fit  # pool-mean air density, where the empirical curve lives
     la_fine = np.arange(20, 51, 2.0)
-    cv = P.carry_vs_la(105.0, fit, rho_mlb, la_fine)
+    cv = P.carry_vs_la(105.0, fit, rho_ref, la_fine)
     pk = int(np.argmax(cv))
     print(f"carry-vs-LA @105 mph peak = {cv[pk]:.1f} ft at {la_fine[pk]:.0f} deg (target ~405-410 at 28-32)")
 
@@ -111,7 +124,15 @@ def main() -> None:
         pt = P.evaluate_point(fit, C.FRANCE_EV, C.FRANCE_LA, tf, C.DOME_ELEV_M, C.DOME_RH)
         print(f"  {tf} F: carry={pt.carry_ft:.1f} ft")
 
-    sens = P.sensitivity_mc(fit)
+    # Per-ball spin scatter: carry spread of comparable balls at near-dome conditions.
+    near = df[
+        df.launch_speed.between(103, 107)
+        & df.launch_angle.between(47, 51)
+        & df.air_density.between(1.14, 1.19)
+    ]
+    spin_sigma = float(near.hit_distance_sc.std()) if len(near) >= 30 else 20.0
+    print(f"spin scatter at France profile (near-dome conditions, n={len(near)}): {spin_sigma:.1f} ft")
+    sens = P.sensitivity_mc(fit, spin_sigma_ft=spin_sigma)
     descent = fp.descent_deg
     wall_pen = G.wall_height_distance_penalty(descent)
     wall_park = float(G.wall_distance(C.FRANCE_SPRAY))
@@ -129,6 +150,16 @@ def main() -> None:
         f"8 ft wall distance penalty at descent {descent:.0f} deg = {wall_pen:.1f} ft; "
         f"Milwaukee wall at {C.FRANCE_SPRAY:.0f} deg = {wall_park:.1f} ft"
     )
+
+    # Learn the wind effect from the data (open-air games).
+    wind = P.learn_wind_effect(df, fit)
+    if wind.get("available"):
+        print(
+            f"\nwind effect (learned, n={wind['n']:,}): "
+            f"{wind['slope_ft_per_mph']:.2f} +/- {wind['slope_se']:.2f} ft per mph of reported tailwind; "
+            f"model field sensitivity {wind['model_field_sensitivity_ft_per_mph']:.2f} ft/mph; "
+            f"effective field-wind fraction {wind['effective_wind_fraction']:.2f}"
+        )
 
     # ---------------------------------------------------------------
     banner("METHOD 3: PHYSICS-INFORMED MACHINE LEARNING")
@@ -172,7 +203,7 @@ def main() -> None:
 
     rows = [
         {
-            "name": "Method 1 empirical (EV/LA pool, n=250)",
+            "name": f"Method 1 empirical (2015-2026 pool, n={gate.n})",
             "central_carry": f"{gate.mean_carry:.0f}",
             "generic_344_raw": prob_cell(emp_probs["generic_344_raw"]),
             "generic_344_wall8": prob_cell(emp_probs["generic_344_wall8"]),
@@ -234,6 +265,14 @@ def main() -> None:
             "fence_ft": C.FENCE_FT,
             "wall_ft": C.WALL_HEIGHT_FT,
         },
+        "data": {
+            "n_balls": int(len(df)),
+            "year_min": int(df.game_year.min()),
+            "year_max": int(df.game_year.max()),
+            "roof_closed_frac": round(float(df.roof_closed.mean()), 4),
+            "mean_air_density": round(float(df.air_density.mean()), 4),
+        },
+        "gate_validation_2015_2025": gatev.as_row(),
         "gate": gate.as_row(),
         "gate_pass": bool(gate_ok),
         "windows": windows.to_dict(orient="records"),
@@ -246,9 +285,13 @@ def main() -> None:
             "peak_ft": round(float(cv[pk]), 1),
             "peak_la": float(la_fine[pk]),
             "fit_rmse_ft": round(fit.rmse(), 2),
+            "density_aware": bool(fit.density_aware),
+            "pool_mean_density": round(float(fit.rho_fit), 4),
             "sensitivity": {k: (round(v, 1) if isinstance(v, float) else v) for k, v in sens.items() if k != "carries"},
             "clear_probs": phys_probs,
+            "wind_effect": {k: (round(v, 4) if isinstance(v, float) else v) for k, v in wind.items()},
             "cl_knots": {int(a): round(float(c), 3) for a, c in zip(fit.knot_la, fit.knot_cl)},
+            "kd_knots": {int(a): round(float(c), 3) for a, c in zip(fit.knot_la, fit.knot_kd)},
         },
         "empirical_clear_probs": emp_probs,
         "ml": {
@@ -297,7 +340,8 @@ def main() -> None:
             direct.quantile_values, C.FIGURES / "ml_predictive_distribution.png", p_clear=direct.p_clear_344
         )
         PL.plot_park_map(C.FIGURES / "park_wall_map.png")
-        print("saved 4 figures to", C.FIGURES)
+        PL.plot_density_effect(fit, C.FIGURES / "density_effect.png")
+        print("saved 5 figures to", C.FIGURES)
 
     banner("DONE")
     print(f"total time {time.time() - t0:.0f}s")

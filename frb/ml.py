@@ -155,7 +155,7 @@ def build_physics_interp(fit: P.LiftFit, temp_f=C.MLB_TEMP_F, elev_m=C.MLB_ELEV_
     z = np.empty((ev_grid.size, la_grid.size))
     for i, e in enumerate(ev_grid):
         for j, a in enumerate(la_grid):
-            z[i, j] = P.carry(float(e), float(a), float(fit.cl(a)), rho_, dt=dt)
+            z[i, j] = P.carry(float(e), float(a), float(fit.cl(a)), rho_, cd=float(fit.cd(a)), dt=dt)
     return RegularGridInterpolator((ev_grid, la_grid), z, bounds_error=False, fill_value=None)
 
 

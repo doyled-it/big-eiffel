@@ -1,10 +1,11 @@
 """Figures for the analysis.
 
-Four plots:
+Plots:
 1. carry vs launch angle, empirical means against the fitted physics curve
 2. the carry distribution at the France profile, with the 344 ft line
 3. the LightGBM predictive distribution at the France input
 4. a top-down map of the park wall distance vs spray angle
+5. the France ball's carry across air densities (the altitude and weather effect)
 """
 
 from __future__ import annotations
@@ -53,9 +54,9 @@ def plot_carry_vs_la(df: pd.DataFrame, fit: P.LiftFit, path, ev: float = 105.0) 
             sems.append(d.std() / np.sqrt(m.sum()))
             las_ok.append(a)
     las_ok = np.array(las_ok)
-    rho_mlb = P.rho(C.MLB_TEMP_F, C.MLB_ELEV_M, C.MLB_RH)
+    rho_ref = fit.rho_fit  # pool-mean air density, matching the empirical means
     la_fine = np.arange(10, 56, 1.0)
-    model = P.carry_vs_la(ev, fit, rho_mlb, la_fine)
+    model = P.carry_vs_la(ev, fit, rho_ref, la_fine)
 
     fig, ax = plt.subplots(figsize=(8, 5))
     ax.errorbar(
@@ -202,6 +203,41 @@ def plot_park_map(path) -> None:
     ax.set_ylabel("feet (toward center field)")
     ax.set_title("American Family Field wall distance by spray angle")
     ax.legend(loc="upper left")
+    fig.tight_layout()
+    fig.savefig(path)
+    plt.close(fig)
+
+
+def plot_density_effect(fit: P.LiftFit, path) -> None:
+    """The France ball's carry across air densities (altitude and weather)."""
+    rhos = np.linspace(0.95, 1.30, 80)
+    cl = float(fit.cl(C.FRANCE_LA))
+    cd = float(fit.cd(C.FRANCE_LA))
+    carries = P.carry_vec(
+        np.full_like(rhos, C.FRANCE_EV),
+        np.full_like(rhos, C.FRANCE_LA),
+        np.full_like(rhos, cl),
+        rhos,
+        np.full_like(rhos, cd),
+    )
+    marks = [
+        ("Coors Field, 1580 m", 0.990, ACCENT),
+        ("American Family Field dome", float(P.rho(C.DOME_TEMP_F, C.DOME_ELEV_M, C.DOME_RH)), GREEN),
+        ("cold, dense, sea level", 1.260, BLUE),
+    ]
+
+    fig, ax = plt.subplots(figsize=(8, 5))
+    ax.plot(rhos, carries, "-", color=INK, lw=2.5)
+    ax.axhline(C.FENCE_FT, color=ACCENT, ls="--", lw=1.8)
+    ax.annotate("344 ft fence", xy=(0.96, C.FENCE_FT), xytext=(0.96, C.FENCE_FT + 3), color=ACCENT, fontsize=10)
+    for label, rr, col in marks:
+        cc = float(P.carry(C.FRANCE_EV, C.FRANCE_LA, cl, rr, cd=cd))
+        ax.plot(rr, cc, "o", color=col, ms=8)
+        ax.annotate(f"{label}\n{cc:.0f} ft", xy=(rr, cc), xytext=(rr, cc - 18), color=col, fontsize=9, ha="center")
+    ax.set_xlabel("air density (kg/m^3)  ·  thinner air to the left")
+    ax.set_ylabel("carry distance (ft)")
+    ax.set_title("The same France ball carries 344 ft only in thin air")
+    ax.invert_xaxis()
     fig.tight_layout()
     fig.savefig(path)
     plt.close(fig)
