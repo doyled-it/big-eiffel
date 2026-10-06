@@ -199,11 +199,18 @@ def pull_savant_batted(start_dt: str, end_dt: str, window_days: int = 18) -> pd.
 
 
 def pull_2026(force: bool = False) -> pd.DataFrame:
-    """Pull and cache the 2026 regular season (not in the HF mirror yet)."""
+    """Pull and cache 2026 batted balls through today (not in the HF mirror yet).
+
+    The end date tracks the current day so a forced re-pull always brings the
+    pool up to the latest completed games, including the postseason.
+    """
+    import datetime as dt
+
     if C.BALLS_2026_PARQUET.exists() and not force:
         print(f"[data] using cached {C.BALLS_2026_PARQUET}")
         return pd.read_parquet(C.BALLS_2026_PARQUET)
-    df = pull_savant_batted("2026-03-15", "2026-10-01")
+    today = dt.date.today().isoformat()
+    df = pull_savant_batted("2026-03-15", today)
     df.to_parquet(C.BALLS_2026_PARQUET, index=False)
     print(f"[data] cached {len(df):,} 2026 batted balls to {C.BALLS_2026_PARQUET}")
     return df

@@ -79,12 +79,30 @@ PULL_COLUMNS = [
 ]
 
 # --------------------------------------------------------------------------
-# The event: Ty France, NLDS Game 1, 2025, American Family Field (Milwaukee)
+# The event: Ty France, NLDS Game 1, 2026-10-03, American Family Field (MIL),
+# Brewers vs Padres, bottom 9th. The ball struck a roof support cable with the
+# roof closed; the official play is a fly out to left (Padres challenged the
+# fair/foul call, upheld). Found in Statcast at game_pk 849830 (see below): a
+# 105.3 mph / 49 deg ball down the left-field line, with its bat tracking.
 # --------------------------------------------------------------------------
 FRANCE_EV = 105.3  # exit velocity, mph
 FRANCE_LA = 49.0  # launch angle, deg
 FRANCE_SPRAY = -44.0  # spray angle, deg (down the left-field line; negative = LF)
 FRANCE_PARK = "MIL"  # Statcast home_team code for the Brewers
+FRANCE_GAME_PK = 849830
+FRANCE_GAME_DATE = "2026-10-03"
+
+# Measured bat tracking for this exact swing (Statcast, 2024+). A 21.9 deg
+# attack angle is a steep uppercut (league average is ~10-12 deg), and the ball
+# still launched at 49 deg, so the bat undercut it by ~27 deg: a backspin-heavy
+# contact. These are the real inputs to Method 3's bat-tracking model.
+FRANCE_BAT_SPEED = 75.8  # mph (barrel speed at contact)
+FRANCE_ATTACK_ANGLE = 21.9  # deg (vertical angle of the bat's path at contact)
+FRANCE_SWING_PATH_TILT = 34.4  # deg
+FRANCE_SWING_LENGTH = 8.3  # ft
+FRANCE_PITCH_MPH = 98.9  # the pitch hit: a 4-seam fastball
+FRANCE_PITCH_DESCENT_DEG = 3.6  # pitch's downward angle at the plate (from vy0, vz0)
+FRANCE_STATCAST_DIST = 323.0  # Statcast hit_distance_sc for the ball (see caveat)
 
 # --------------------------------------------------------------------------
 # Statcast hit-coordinate geometry
