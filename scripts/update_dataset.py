@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import argparse
 import datetime as dt
+import time
 
 import numpy as np
 import pandas as pd
@@ -150,8 +151,12 @@ def main() -> None:
     updir = C.DATA / "updates"
     updir.mkdir(exist_ok=True)
     today = dt.date.today()
+    base_last = dt.date.fromisoformat(C.DATASET_BASE_LAST_DATE)
     for k in range(1, args.days + 1):
-        date_str = (today - dt.timedelta(days=k)).isoformat()
+        day = today - dt.timedelta(days=k)
+        if day <= base_last:
+            continue  # covered by the published base file; do not duplicate
+        date_str = day.isoformat()
         try:
             part = enrich_date(date_str)
         except Exception as e:  # noqa: BLE001
@@ -162,13 +167,21 @@ def main() -> None:
             continue
         local = updir / f"{date_str}.parquet"
         part.to_parquet(local, index=False)
-        api.upload_file(
-            path_or_fileobj=str(local),
-            path_in_repo=f"data/updates/{date_str}.parquet",
-            repo_id=args.repo,
-            repo_type="dataset",
-        )
-        print(f"[update] {date_str}: {len(part):,} balls uploaded")
+        for attempt in range(4):
+            try:
+                api.upload_file(
+                    path_or_fileobj=str(local),
+                    path_in_repo=f"data/updates/{date_str}.parquet",
+                    repo_id=args.repo,
+                    repo_type="dataset",
+                )
+                print(f"[update] {date_str}: {len(part):,} balls uploaded")
+                break
+            except Exception as e:  # noqa: BLE001
+                print(f"[update] {date_str}: upload attempt {attempt + 1} failed ({e}); retrying")
+                time.sleep(10 * (attempt + 1))
+        else:
+            print(f"[update] {date_str}: upload failed after retries")
 
 
 if __name__ == "__main__":

@@ -32,6 +32,11 @@ SAMPLE_PARQUET = DATA / "batted_balls_sample.parquet"  # small committed sample
 # filters to batted balls server-side).
 SAVANT_CSV = "https://baseballsavant.mlb.com/statcast_search/csv"
 
+# Last date covered by the published base file. The daily updater only appends
+# dates after this, so its partitions never duplicate the base. Bump it whenever
+# the base is rebuilt and re-published.
+DATASET_BASE_LAST_DATE = "2026-10-01"
+
 # Game types kept in the pool: regular season plus the four postseason rounds
 # (wild card, division, league championship, world series). Spring training (S),
 # exhibition (E), and all-star (A) are excluded. The France analysis filters

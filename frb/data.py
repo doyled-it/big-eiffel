@@ -179,6 +179,8 @@ def pull_savant_batted(start_dt: str, end_dt: str, window_days: int = 18) -> pd.
         if len(part):
             frames.append(part)
         cur = w_end + pd.Timedelta(days=1)
+    if not frames:  # off-day or empty range
+        return pd.DataFrame(columns=C.PULL_COLUMNS + ["spray_deg"])
     df = pd.concat(frames, ignore_index=True)
     if "game_type" in df.columns:
         df = df[df["game_type"].isin(C.GAME_TYPES)]
