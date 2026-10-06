@@ -22,6 +22,7 @@ from frb import ml as ML
 from frb import physics as P
 from frb import plots as PL
 from frb import report as R
+from frb import spin as SP
 from frb import weather as W
 
 
@@ -160,6 +161,33 @@ def main() -> None:
         )
 
     # ---------------------------------------------------------------
+    banner("SPIN FROM THE MEASURED SWING")
+    # France's actual swing was measured by Statcast (game_pk 849830): a 75.8 mph
+    # barrel on a 21.9 deg uppercut, launching the ball at 49 deg. That is a ~27
+    # deg undercut, so a backspin-heavy ball. We cannot measure batted-ball spin
+    # (Statcast does not publish it), so we bound it from the collision geometry
+    # and read its carry effect empirically from comparable 2024+ balls.
+    spin_geo = SP.collision_geometry()
+    print(
+        f"measured swing: bat {C.FRANCE_BAT_SPEED} mph, attack {C.FRANCE_ATTACK_ANGLE} deg; "
+        f"undercut {spin_geo['undercut_deg']} deg, collision obliquity {spin_geo['obliquity_deg']} deg"
+    )
+    print(
+        f"backspin: full-grip ceiling {spin_geo['spin_ceiling_rpm']} rpm; "
+        f"estimated {spin_geo['spin_estimate_rpm_lo']:.0f}-{spin_geo['spin_estimate_rpm_hi']:.0f} rpm "
+        f"(sliding contact reaches a fraction of the ceiling)"
+    )
+    attack_slope = SP.empirical_attack_slope(df)
+    if attack_slope:
+        print(
+            f"empirical carry vs attack angle (n={attack_slope['n']}, EV {attack_slope['ev_band']}, "
+            f"LA {attack_slope['la_band']}): {attack_slope['slope_ft_per_deg']} ft per deg; "
+            f"France's {C.FRANCE_ATTACK_ANGLE} deg -> {attack_slope['carry_at_france_attack']} ft vs "
+            f"{attack_slope['carry_at_median_attack']} ft at the band median {attack_slope['median_attack_deg']} deg"
+        )
+    spin_rng = (spin_geo["spin_estimate_rpm_lo"], spin_geo["spin_estimate_rpm_hi"])
+
+    # ---------------------------------------------------------------
     banner("METHOD 3: PHYSICS-INFORMED MACHINE LEARNING")
     dm = ML.prep_model_frame(df)
     print(f"modeling rows: {len(dm):,}")
@@ -292,6 +320,18 @@ def main() -> None:
             "kd_knots": {int(a): round(float(c), 3) for a, c in zip(fit.knot_la, fit.knot_kd)},
         },
         "empirical_clear_probs": emp_probs,
+        "spin": {
+            "measured_swing": {
+                "bat_speed_mph": C.FRANCE_BAT_SPEED,
+                "attack_angle_deg": C.FRANCE_ATTACK_ANGLE,
+                "swing_path_tilt_deg": C.FRANCE_SWING_PATH_TILT,
+                "swing_length_ft": C.FRANCE_SWING_LENGTH,
+                "pitch_mph": C.FRANCE_PITCH_MPH,
+                "statcast_hit_distance_ft": C.FRANCE_STATCAST_DIST,
+            },
+            "collision": spin_geo,
+            "empirical_attack_slope": attack_slope,
+        },
         "ml": {
             "direct": {
                 "median": round(direct.median, 1),
@@ -332,6 +372,13 @@ def main() -> None:
     # ---------------------------------------------------------------
     if not args.no_plots:
         banner("FIGURES")
+        PL.plot_trajectory_profile(
+            fit,
+            C.FIGURES / "trajectory_profile.png",
+            carry_p05=sens["p05"],
+            carry_p95=sens["p95"],
+            spin_rpm=spin_rng,
+        )
         PL.plot_carry_vs_la(df, fit, C.FIGURES / "carry_vs_launch_angle.png")
         PL.plot_france_distribution(df, C.FIGURES / "france_carry_distribution.png")
         PL.plot_ml_distribution(
@@ -339,7 +386,7 @@ def main() -> None:
         )
         PL.plot_park_map(C.FIGURES / "park_wall_map.png")
         PL.plot_density_effect(fit, C.FIGURES / "density_effect.png")
-        print("saved 5 figures to", C.FIGURES)
+        print("saved 6 figures to", C.FIGURES)
 
     banner("DONE")
     print(f"total time {time.time() - t0:.0f}s")

@@ -119,6 +119,54 @@ def main() -> None:
         ],
     }
 
+    # Headline trajectory profile: free-flight arc, aerodynamic band, cable.
+    rho_dome = float(P.rho(C.DOME_TEMP_F, C.DOME_ELEV_M, C.DOME_RH))
+    tr = P.integrate(C.FRANCE_EV, C.FRANCE_LA, cl49, rho_dome, cd=cd49)
+    xg = np.linspace(0, tr.range_ft, 120)
+    zc = np.interp(xg, tr.x_ft, tr.z_ft)
+    rng = np.random.default_rng(0)
+    lo = np.full_like(xg, np.inf)
+    hi = np.full_like(xg, -np.inf)
+    for _ in range(40):
+        t = rng.uniform(60.0, 80.0)
+        s = float(np.clip(rng.normal(1.0, 0.35 / 2.0), 0.4, 1.9))
+        trj = P.integrate(C.FRANCE_EV, C.FRANCE_LA, cl49 * s, float(P.rho(t, C.DOME_ELEV_M, C.DOME_RH)), cd=cd49)
+        z = np.interp(xg, trj.x_ft, trj.z_ft, left=np.nan, right=np.nan)
+        lo = np.fmin(lo, np.nan_to_num(z, nan=np.inf))
+        hi = np.fmax(hi, np.nan_to_num(z, nan=-np.inf))
+    # Where no sampled arc was airborne, collapse the band to the central line,
+    # and keep the band enclosing the central arc so the polygon is well-formed.
+    lo = np.where(np.isfinite(lo), lo, zc)
+    hi = np.where(np.isfinite(hi), hi, zc)
+    lo = np.minimum(lo, zc)
+    hi = np.maximum(hi, zc)
+    apex_i = int(np.argmax(zc))
+    sp = res["spin"]
+    out["trajectory"] = {
+        "x": [round(float(v), 1) for v in xg],
+        "z": [round(float(v), 1) for v in zc],
+        "band_lo": [round(float(max(v, 0)), 1) for v in lo],
+        "band_hi": [round(float(v), 1) for v in hi],
+        "apex_x": round(float(xg[apex_i]), 1),
+        "apex_z": round(float(zc[apex_i]), 1),
+        "landing_ft": round(float(tr.range_ft), 1),
+        "landing_p05": res["physics"]["sensitivity"]["p05"],
+        "landing_p95": res["physics"]["sensitivity"]["p95"],
+        "wall_ft": C.FENCE_FT,
+        "wall_height_ft": C.WALL_HEIGHT_FT,
+        "statcast_dist": C.FRANCE_STATCAST_DIST,
+    }
+    out["spin"] = {
+        "bat_speed": sp["measured_swing"]["bat_speed_mph"],
+        "attack_angle": sp["measured_swing"]["attack_angle_deg"],
+        "pitch_mph": sp["measured_swing"]["pitch_mph"],
+        "undercut_deg": sp["collision"]["undercut_deg"],
+        "spin_lo": sp["collision"]["spin_estimate_rpm_lo"],
+        "spin_hi": sp["collision"]["spin_estimate_rpm_hi"],
+        "attack_slope": sp["empirical_attack_slope"],
+    }
+    out["ml_bat"] = res["ml"].get("bat_tracking")
+
     json.dump(out, open(C.OUTPUTS / "chartdata.json", "w"))
     print(f"wrote {C.OUTPUTS / 'chartdata.json'}: keys {list(out)}")
     print(f"carry-vs-la emp pts {len(emp_la)} | hist n {len(carry)} cleared {out['france_hist']['cleared']}")

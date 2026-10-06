@@ -208,6 +208,134 @@ def plot_park_map(path) -> None:
     plt.close(fig)
 
 
+def plot_trajectory_profile(
+    fit: P.LiftFit,
+    path,
+    carry_p05: float | None = None,
+    carry_p95: float | None = None,
+    spin_rpm: tuple[float, float] | None = None,
+) -> None:
+    """Headline profile: the free-flight arc vs the cable-interrupted ball.
+
+    A true-scale side view from home plate. The solid arc is the fitted physics
+    model's free flight for France's launch at the closed-roof dome air density
+    (the backspin that lifts a 49 deg ball is already in the calibrated lift, so
+    the arc has a real fly ball's steep climb and descent, not a bare parabola).
+    A shaded band shows the aerodynamic spread over the plausible temperature and
+    spin range, and a ground bracket shows the full p5-p95 landing range. The
+    344 ft wall (8 ft tall) is drawn to scale. The cable is marked near the apex,
+    where the ball actually struck it; the dashed path after that is illustrative,
+    since the exact cable height and deflection are not in any feed.
+
+    Arguments:
+        fit: The fitted physics model.
+        path: Output image path.
+        carry_p05: Low end of the plausible landing range (ft), for the bracket.
+        carry_p95: High end of the plausible landing range (ft), for the bracket.
+        spin_rpm: (low, high) estimated backspin range, for the annotation.
+    """
+    rho_dome = P.rho(C.DOME_TEMP_F, C.DOME_ELEV_M, C.DOME_RH)
+    cl0 = float(fit.cl(C.FRANCE_LA))
+    cd0 = float(fit.cd(C.FRANCE_LA))
+    tr = P.integrate(C.FRANCE_EV, C.FRANCE_LA, cl0, rho_dome, cd=cd0)
+    apex_i = int(np.argmax(tr.z_ft))
+    apex_x, apex_z = float(tr.x_ft[apex_i]), float(tr.z_ft[apex_i])
+
+    # Aerodynamic envelope: sample temperature and lift (spin) over the plausible
+    # range and take the min/max height at each distance.
+    rng = np.random.default_rng(0)
+    xg = np.linspace(0, tr.range_ft, 240)
+    lo = np.full_like(xg, np.inf)
+    hi = np.full_like(xg, -np.inf)
+    for _ in range(40):
+        t = rng.uniform(60.0, 80.0)
+        s = float(np.clip(rng.normal(1.0, 0.35 / 2.0), 0.4, 1.9))
+        trj = P.integrate(C.FRANCE_EV, C.FRANCE_LA, cl0 * s, P.rho(t, C.DOME_ELEV_M, C.DOME_RH), cd=cd0)
+        z = np.interp(xg, trj.x_ft, trj.z_ft, right=np.nan)
+        lo = np.fmin(lo, z)
+        hi = np.fmax(hi, z)
+
+    fig, ax = plt.subplots(figsize=(11, 5))
+    ax.set_facecolor("#f7f8fa")
+    # Ground and home plate.
+    ax.axhline(0, color="#8a8f99", lw=1)
+    ax.plot(0, 0, "s", color="k", ms=7)
+    ax.annotate("home plate", xy=(0, 0), xytext=(2, 6), fontsize=9, color=INK)
+
+    # Aerodynamic band and the central free-flight arc.
+    ax.fill_between(xg, np.nan_to_num(lo), np.nan_to_num(hi), color=ACCENT, alpha=0.13, lw=0,
+                    label="plausible range (temperature + spin)")
+    ax.plot(tr.x_ft, tr.z_ft, "-", color=ACCENT, lw=2.6, label=f"model free flight → {tr.range_ft:.0f} ft")
+
+    # The 344 ft wall, 8 ft tall, to scale.
+    ax.add_patch(plt.Rectangle((C.FENCE_FT, 0), 2.0, C.WALL_HEIGHT_FT, color=INK))
+    ax.annotate(
+        f"left-field wall\n{C.FENCE_FT:.0f} ft out, {C.WALL_HEIGHT_FT:.0f} ft high",
+        xy=(C.FENCE_FT, C.WALL_HEIGHT_FT),
+        xytext=(C.FENCE_FT - 86, 34),
+        fontsize=9,
+        color=INK,
+        arrowprops=dict(arrowstyle="->", color=INK, lw=1),
+    )
+
+    # Shortfall between the free-flight landing and the wall.
+    ax.annotate(
+        "",
+        xy=(C.FENCE_FT, 4),
+        xytext=(tr.range_ft, 4),
+        arrowprops=dict(arrowstyle="<->", color=GREEN, lw=1.4),
+    )
+    ax.annotate(
+        f"{C.FENCE_FT - tr.range_ft:.0f} ft short",
+        xy=((tr.range_ft + C.FENCE_FT) / 2, 4),
+        xytext=((tr.range_ft + C.FENCE_FT) / 2 - 16, 11),
+        fontsize=9,
+        color=GREEN,
+    )
+
+    # The roof cable at the apex and the illustrative interrupted path.
+    ax.plot([apex_x - 12, apex_x + 12], [apex_z, apex_z], "-", color="#555", lw=1.4)
+    ax.plot(apex_x, apex_z, "o", color="#222", ms=7)
+    ax.annotate(
+        f"struck roof cable near the apex\n(~{apex_z:.0f} ft up, {apex_x:.0f} ft out; height approximate)",
+        xy=(apex_x, apex_z),
+        xytext=(apex_x - 40, apex_z + 14),
+        fontsize=9,
+        color="#333",
+        arrowprops=dict(arrowstyle="->", color="#333", lw=1),
+    )
+    xi = np.linspace(apex_x, apex_x + 46, 40)
+    zi = apex_z - (xi - apex_x) ** 2 * (apex_z / 46**2)
+    ax.plot(xi, np.clip(zi, 0, None), ":", color="#777", lw=1.8, label="actual path after the cable (illustrative)")
+
+    # Full landing range bracket on the ground.
+    if carry_p05 is not None and carry_p95 is not None:
+        ax.annotate(
+            "", xy=(carry_p05, -7), xytext=(carry_p95, -7),
+            arrowprops=dict(arrowstyle="|-|", color=BLUE, lw=1.3),
+        )
+        ax.annotate(
+            f"plausible landing {carry_p05:.0f}–{carry_p95:.0f} ft",
+            xy=((carry_p05 + carry_p95) / 2, -7),
+            xytext=((carry_p05 + carry_p95) / 2 - 40, -16),
+            fontsize=9,
+            color=BLUE,
+        )
+
+    sub = "" if spin_rpm is None else f"   ·   estimated backspin ≈ {spin_rpm[0]:.0f}–{spin_rpm[1]:.0f} rpm"
+    ax.set_title("Uninterrupted, the ball comes down short of the wall" + sub, fontsize=12)
+    ax.set_xlabel("distance from home plate (ft)")
+    ax.set_ylabel("height (ft)")
+    ax.set_xlim(-12, 392)
+    ax.set_ylim(-22, apex_z + 34)
+    ax.set_aspect("equal")
+    ax.grid(True, alpha=0.25)
+    ax.legend(loc="upper right", fontsize=9, framealpha=0.9)
+    fig.tight_layout()
+    fig.savefig(path)
+    plt.close(fig)
+
+
 def plot_density_effect(fit: P.LiftFit, path) -> None:
     """The France ball's carry across air densities (altitude and weather)."""
     rhos = np.linspace(0.95, 1.30, 80)
