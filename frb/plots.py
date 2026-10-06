@@ -280,9 +280,9 @@ def plot_trajectory_profile(
     ax.annotate(f"{C.FENCE_FT:.0f} ft fence", xy=(C.FENCE_FT + 6, 14), fontsize=9.5, color=INK, fontweight="bold")
     ax.annotate(f"{C.WALL_HEIGHT_FT:.0f} ft high", xy=(C.FENCE_FT + 6, 5), fontsize=9, color=INK)
 
-    # Cable strike at the apex (best estimate).
-    ax.plot([apex_x - 11, apex_x + 11], [apex_z, apex_z], "-", color="#555", lw=1.6)
-    ax.plot(apex_x, apex_z, "o", color="#222", ms=7)
+    # Cable strike at the apex (best estimate), in gold so it reads as the cable.
+    ax.plot([apex_x - 13, apex_x + 13], [apex_z, apex_z], "-", color="#d99a2b", lw=3)
+    ax.plot(apex_x, apex_z, "o", color="#d99a2b", ms=8, markeredgecolor=INK, markeredgewidth=0.6)
     ax.annotate(
         f"clipped the roof cable near its apex\nbest estimate: ~{apex_z:.0f} ft up, {apex_x:.0f} ft out",
         xy=(apex_x, apex_z),
