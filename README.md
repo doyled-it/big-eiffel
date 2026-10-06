@@ -1,4 +1,4 @@
-# france-roof-ball
+# Big Eiffel
 
 **Would Ty France's ball have cleared the fence if it hadn't hit the roof cable?**
 
@@ -357,9 +357,27 @@ frb/
   report.py      the cross-method results table
   stats_utils.py Wilson interval, weighted quantile
 run.py           single entry point that reproduces everything
-scripts/         chart-data export and the HuggingFace dataset publisher
+scripts/         chart-data export, site build, HuggingFace dataset publisher
+web/             index.template.html: the page, with a __DATA__ placeholder
+site/            built static site (index.html) that Cloudflare Pages serves
 tests/           unit tests plus the data-gated validation gate
 ```
+
+## The web page
+
+The reader-facing page lives in `web/index.template.html` (one HTML file, Chart.js
+from a CDN, no framework). `make site` injects `outputs/chartdata.json` into it and
+writes `site/index.html`, a self-contained static page.
+
+It deploys on [Cloudflare Pages](https://pages.cloudflare.com/):
+
+1. In the Cloudflare dashboard, create a Pages project and connect this GitHub repo.
+2. Framework preset **None**, build command **empty**, build output directory **`site`**.
+3. Add the custom domain **bigeiffel.doyled-it.com** under the project's Custom Domains.
+
+There is no build step on Cloudflare: `site/index.html` is committed, so every push to
+`main` redeploys it. To refresh the page after changing the analysis or the template,
+run `make site` and commit the result.
 
 ## Sources
 
