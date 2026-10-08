@@ -87,7 +87,7 @@ PUBLISH_COLS = [
     "attack_angle",
     "attack_direction",
     "swing_path_tilt",
-    "undercut_deg",
+    "launch_minus_attack_deg",
     # the pitch that was hit
     "pitch_type",
     "pitch_name",
@@ -157,7 +157,8 @@ it was hit in:
 - **Batted ball**: exit velocity, launch angle, derived spray angle, projected
   hit distance, the Statcast barrel code and an `is_barrel` flag, and bat
   tracking where available (2024+): bat speed, attack angle, swing path tilt,
-  swing length, plus a derived `undercut_deg` (the backspin driver).
+  swing length, plus a derived `launch_minus_attack_deg` (positive = undercut/backspin,
+  negative = overcut/topspin).
 - **Expected outcomes** (Statcast models): `xba`, `xwoba`, `xslg`, plus
   `woba_value`, `babip_value`, `iso_value`, and the run- and win-expectancy
   deltas. A derived `carry_vs_expected_ft` gives how far the ball carried versus
@@ -182,7 +183,7 @@ it was hit in:
 | `is_barrel` | True for a Statcast "barrel" |
 | `xba`, `xwoba`, `xslg` | Statcast expected stats from exit velocity and angle |
 | `carry_vs_expected_ft` | carry minus the physics model at this ball's air density |
-| `undercut_deg` | launch angle minus attack angle (2024+); the backspin driver |
+| `launch_minus_attack_deg` | launch minus attack angle (2024+); + undercut/backspin, - overcut/topspin |
 | `attack_angle`, `bat_speed` | bat tracking (2024+) |
 | `pitch_type`, `release_speed`, `release_spin_rate` | the pitch that was hit |
 | `air_density` | computed air density (kg/m^3) |
@@ -218,7 +219,10 @@ def clean_frame(df: pd.DataFrame) -> pd.DataFrame:
     if "launch_speed_angle" in df.columns:
         df["is_barrel"] = df["launch_speed_angle"].eq(6)  # Statcast barrel code
     if {"launch_angle", "attack_angle"} <= set(df.columns):
-        df["undercut_deg"] = df["launch_angle"] - df["attack_angle"]  # 2024+ spin driver
+        # Signed vertical gap between the launch and the bat's path (2024+):
+        # positive is an undercut (backspin), negative an overcut (topspin); the
+        # magnitude scales the spin.
+        df["launch_minus_attack_deg"] = df["launch_angle"] - df["attack_angle"]
     if {"launch_speed", "launch_angle", "air_density", "hit_distance_sc"} <= set(df.columns):
         # How far the ball went versus the fitted physics model at its own air
         # density (positive means it carried past expectation). No re-fit.

@@ -227,8 +227,52 @@ in this analysis, and the closed-roof ball had no wind anyway.
 The full enriched dataset (2.52M balls, 79 columns: the batted ball with its full
 Statcast context, player and pitcher identity, the pitch that was hit, expected
 stats, bat tracking, per-game weather and air density, and derived fields like
-`is_barrel`, `undercut_deg`, and `carry_vs_expected_ft`) is published at
+`is_barrel`, `launch_minus_attack_deg`, and `carry_vs_expected_ft`) is published at
 [`doyled-it/statcast-batted-balls-weather`](https://huggingface.co/datasets/doyled-it/statcast-batted-balls-weather).
+
+### Derived metrics
+
+Three columns are computed here, not pulled from Statcast.
+
+**`is_barrel`** flags Statcast's "barrel" contact quality. The `launch_speed_angle`
+code runs 1 to 6, and 6 is a barrel:
+
+```
+is_barrel = (launch_speed_angle == 6)
+```
+
+**`launch_minus_attack_deg`** is the signed vertical gap between the ball's launch and
+the bat's path (2024+, needs bat tracking):
+
+```
+launch_minus_attack_deg = launch_angle - attack_angle
+```
+
+Positive means the bat passed below the ball's launch line (an undercut, which puts
+backspin on it); negative means it passed above (an overcut, topspin). The magnitude
+scales how much spin. France's ball was `49 - 21.9 = 27.1` degrees, a steep undercut.
+
+**`carry_vs_expected_ft`** is how far the ball actually carried versus the physics model,
+at its own air density. Positive means it beat the model:
+
+```
+carry_vs_expected_ft = hit_distance_sc - C(launch_speed, launch_angle, air_density)
+```
+
+`C` is the Method 2 drag-plus-Magnus carry: a point-mass trajectory launched at the exit
+velocity and launch angle, integrated to the ground under gravity, quadratic drag, and a
+backspin Magnus lift, evaluated at the ball's own air density. With velocity
+$\mathbf{v} = (v_x, v_z)$ and speed $s = \lVert \mathbf{v} \rVert$,
+
+$$\dot{v}_x = -D\,s\,v_x - L\,s\,v_z, \qquad \dot{v}_z = -g - D\,s\,v_z + L\,s\,v_x,$$
+
+$$D = \frac{\rho\,A\,C_d(\mathrm{LA})}{2m}, \qquad L = \frac{\rho\,A\,C_l(\mathrm{LA})}{2m},$$
+
+where $\rho$ is the ball's air density, $A$ and $m$ the ball's cross-section and mass,
+$C_l(\mathrm{LA})$ the fitted effective lift, and $C_d(\mathrm{LA}) = C_D\,k_d(\mathrm{LA})$
+the fitted effective drag. The coefficients are the stored fit (`FIT_CL_VALUES`,
+`FIT_KD_VALUES` at the `CL_KNOTS_LA` knots, PCHIP-interpolated), so the column reproduces
+with no re-fit; regenerate it if the model is ever materially re-fit.
 
 ## Results
 
