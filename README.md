@@ -224,7 +224,10 @@ the ~3 ft per mph a ball feeling the full wind would show. The projected
 distance is largely wind-neutralized, which means wind is not a hidden confound
 in this analysis, and the closed-roof ball had no wind anyway.
 
-The full enriched dataset (2.52M balls, 27 columns) is published at
+The full enriched dataset (2.52M balls, 79 columns: the batted ball with its full
+Statcast context, player and pitcher identity, the pitch that was hit, expected
+stats, bat tracking, per-game weather and air density, and derived fields like
+`is_barrel`, `undercut_deg`, and `carry_vs_expected_ft`) is published at
 [`doyled-it/statcast-batted-balls-weather`](https://huggingface.co/datasets/doyled-it/statcast-batted-balls-weather).
 
 ## Results
