@@ -13,26 +13,27 @@
 /* Layout: single-column data story, ~680px reading column, full-bleed chart cards.
    Tokens first (light), redefined for dark under both media and [data-theme]. */
 :root{
-  --bg:#f3f4f1; --surface:#ffffff; --fg:#15181c; --muted:#59636e;
-  --line:#dadfd8; --grid:rgba(0,0,0,.08);
-  --accent:#df4f27;      /* over the fence, home run */
-  --accent-soft:#f3cfc2;
-  --cool:#36627f;        /* fell short, distribution */
-  --cool-soft:#c6d6df;
+  --bg:#f3f1ec; --surface:#ffffff; --fg:#1a1c22; --muted:#5f6670;
+  --line:#dedbd2; --grid:rgba(0,0,0,.08);
+  --accent:#cf8a00;      /* gold: reached / home run */
+  --accent-soft:#f0dcae;
+  --cool:#284f86;        /* Brewers navy: fell short, the pool */
+  --cool-soft:#cdd9ea;
+  --france:#7a4f2e;       /* Padres brown: France's own ball */
   --display:"Oswald",system-ui,sans-serif;
   --body:"IBM Plex Sans",system-ui,sans-serif;
   --mono:"IBM Plex Mono",ui-monospace,monospace;
 }
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
-  --bg:#111419; --surface:#191d23; --fg:#e7eae5; --muted:#99a4b0;
-  --line:#2a313a; --grid:rgba(255,255,255,.09);
-  --accent:#ff6b3d; --accent-soft:#4a2a1e; --cool:#5c9ccc; --cool-soft:#213744;
+  --bg:#12151b; --surface:#1a1e25; --fg:#e9ebf0; --muted:#9aa3b0;
+  --line:#2a2f38; --grid:rgba(255,255,255,.09);
+  --accent:#ffc52f; --accent-soft:#43351a; --cool:#6f9fd6; --cool-soft:#1e2f49; --france:#c08a5a;
   color-scheme:dark;
 }}
 :root[data-theme="dark"]{
-  --bg:#111419; --surface:#191d23; --fg:#e7eae5; --muted:#99a4b0;
-  --line:#2a313a; --grid:rgba(255,255,255,.09);
-  --accent:#ff6b3d; --accent-soft:#4a2a1e; --cool:#5c9ccc; --cool-soft:#213744;
+  --bg:#12151b; --surface:#1a1e25; --fg:#e9ebf0; --muted:#9aa3b0;
+  --line:#2a2f38; --grid:rgba(255,255,255,.09);
+  --accent:#ffc52f; --accent-soft:#43351a; --cool:#6f9fd6; --cool-soft:#1e2f49; --france:#c08a5a;
   color-scheme:dark;
 }
 *{box-sizing:border-box}
@@ -160,8 +161,7 @@ footer .mono{font-size:.78rem}
       <p class="csub">Side view from home plate, to scale: the free-flight arc, the cable-clipped path, and the model's landing distribution along the ground.</p>
       <div class="legend">
         <span><i class="swatch" style="background:var(--accent)"></i>model free flight</span>
-        <span><i class="swatch" style="background:#d99a2b"></i>roof cable</span>
-        <span><i class="swatch" style="background:var(--muted)"></i>path after the cable</span>
+        <span><i class="swatch" style="background:var(--france)"></i>cable and path after</span>
         <span><i class="swatch" style="background:var(--fg)"></i>344 ft fence (8 ft)</span>
       </div>
       <div class="chart-box" id="trajBox"></div>
@@ -235,7 +235,7 @@ footer .mono{font-size:.78rem}
       <p class="csub">Carry of the 105.3 mph, 49 degree ball across air densities, from the fitted model.</p>
       <div class="legend">
         <span><i class="swatch" style="background:var(--accent)"></i>Coors Field (0.99)</span>
-        <span><i class="swatch" style="background:#3a9d5d"></i>Milwaukee dome (1.16)</span>
+        <span><i class="swatch" style="background:var(--france)"></i>Milwaukee dome (1.16)</span>
         <span><i class="swatch" style="background:var(--cool)"></i>cold sea level (1.26)</span>
       </div>
       <div class="chart-box" style="height:300px"><canvas id="chartDensity"></canvas></div>
@@ -421,7 +421,7 @@ function build(){
   }));
 
   // 4. air density effect at the France profile
-  const green='#3a9d5d';
+  const france=cssv('--france');
   const dc=DATA.density_curve;
   const dpts=dc.rho.map((r,i)=>({x:r,y:dc.carry[i]}));
   charts.push(new Chart(document.getElementById('chartDensity'),{
@@ -429,7 +429,7 @@ function build(){
     data:{datasets:[
       {data:dpts,showLine:true,borderColor:fg,borderWidth:2.5,pointRadius:0,tension:.2,order:2},
       {data:dc.markers.map(m=>({x:m.rho,y:m.carry})),pointRadius:6,
-        backgroundColor:dc.markers.map((m,i)=>[acc,green,cool][i]),borderWidth:0,order:1}
+        backgroundColor:dc.markers.map((m,i)=>[acc,france,cool][i]),borderWidth:0,order:1}
     ]},
     options:{responsive:true,maintainAspectRatio:false,animation:false,
       plugins:{legend:{display:false},tooltip:{callbacks:{label:it=>`density ${it.parsed.x.toFixed(2)}: ${Math.round(it.parsed.y)} ft`}},
@@ -445,7 +445,7 @@ function build(){
 function drawTrajectory(){
   const T=DATA.trajectory;
   const fg=cssv('--fg'), muted=cssv('--muted'), acc=cssv('--accent'), cool=cssv('--cool'), accSoft=cssv('--accent-soft');
-  const green='#3a9d5d', gold='#d99a2b';
+  const france=cssv('--france');
   const SC=1.3;                                  // px per foot, equal aspect
   const Xmax=412, Zmax=Math.max(T.apex_z,120)+46, Zmin=-30, padX=12, padT=10;
   const Wpx=Xmax*SC+padX*2, Hpx=(Zmax-Zmin)*SC+padT*2;
@@ -471,18 +471,18 @@ function drawTrajectory(){
 
   const svg=`
   <svg viewBox="0 0 ${Wpx.toFixed(0)} ${Hpx.toFixed(0)}" width="100%" style="max-width:100%;height:auto" role="img"
-       aria-label="Side view of France's ball from home plate, to scale. The model's free-flight arc peaks about ${Math.round(cz)} feet up and lands about ${Math.round(T.landing_ft)} feet out, ${shortv} feet short of the 344 foot, 8 foot fence. A gold mark near the apex is the roof cable; the dashed path is where the clipped ball came down, deep in left field. A rug along the ground shows the model's landing distribution; ${frac} percent reach the fence.">
+       aria-label="Side view of France's ball from home plate, to scale. The model's free-flight arc peaks about ${Math.round(cz)} feet up and lands about ${Math.round(T.landing_ft)} feet out, ${shortv} feet short of the 344 foot, 8 foot fence. A brown mark near the apex is the roof cable; the dashed path is where the clipped ball came down, deep in left field. A rug along the ground shows the model's landing distribution; ${frac} percent reach the fence.">
     <style>
       .arc{fill:none;stroke:${acc};stroke-width:2.6;stroke-linejoin:round}
       .band{fill:${accSoft};opacity:.55}
-      .intr{fill:none;stroke:${muted};stroke-width:1.8;stroke-dasharray:3 4;opacity:.85}
+      .intr{fill:none;stroke:${france};stroke-width:1.8;stroke-dasharray:3 4;opacity:.85}
       .grd{stroke:${muted};stroke-width:1}
       .tick{stroke:${muted};stroke-width:1;opacity:.5}
       .lab{fill:${muted};font:500 12px "IBM Plex Mono",monospace}
       .labf{fill:${fg};font:600 12px "IBM Plex Mono",monospace}
-      .labg{fill:${green};font:600 12px "IBM Plex Mono",monospace}
+      .labg{fill:${cool};font:600 12px "IBM Plex Mono",monospace}
       .hint{fill:${cool};font:600 11.5px "IBM Plex Mono",monospace;cursor:pointer}
-      .sfk{stroke:${green};stroke-width:1.4}
+      .sfk{stroke:${cool};stroke-width:1.4}
       #rugHit{cursor:pointer}
     </style>
     <line class="grd" x1="${X(0)}" y1="${g}" x2="${X(Xmax)}" y2="${g}"/>
@@ -496,8 +496,8 @@ function drawTrajectory(){
     <text x="${X(T.wall_ft)}" y="${Y(16)}" text-anchor="middle" class="lab">fence, 8 ft</text>
     <line class="sfk" x1="${X(T.landing_ft)}" y1="${Y(46)}" x2="${X(T.wall_ft)}" y2="${Y(46)}"/>
     <text x="${X((T.landing_ft+T.wall_ft)/2)}" y="${Y(52)}" text-anchor="middle" class="labg">${shortv} ft short</text>
-    <line x1="${X(cx-16)}" y1="${Y(cz)}" x2="${X(cx+16)}" y2="${Y(cz)}" stroke="${gold}" stroke-width="3"/>
-    <circle cx="${X(cx)}" cy="${Y(cz)}" r="5" fill="${gold}" stroke="${fg}" stroke-width="0.8"/>
+    <line x1="${X(cx-16)}" y1="${Y(cz)}" x2="${X(cx+16)}" y2="${Y(cz)}" stroke="${france}" stroke-width="3"/>
+    <circle cx="${X(cx)}" cy="${Y(cz)}" r="5" fill="${france}" stroke="${fg}" stroke-width="0.8"/>
     <text x="${X(cx)}" y="${Y(cz+27)}" text-anchor="middle" class="lab">clipped the roof cable near its apex</text>
     <text x="${X(cx)}" y="${Y(cz+15)}" text-anchor="middle" class="lab">best estimate ~${Math.round(cz)} ft up, ${Math.round(cx)} ft out</text>
     <circle cx="${X(cpt)}" cy="${Y(3)}" r="4.5" fill="${fg}"/>

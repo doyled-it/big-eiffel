@@ -33,10 +33,10 @@ plt.rcParams.update(
     }
 )
 
-INK = "#1b2a4a"
-ACCENT = "#c1432b"
-BLUE = "#2b6cb0"
-GREEN = "#2f855a"
+INK = "#1a1c22"
+ACCENT = "#cf8a00"  # gold: reached / home run
+BLUE = "#284f86"  # Brewers navy: the pool / short
+GREEN = "#7a4f2e"  # Padres brown: France-specific marks
 
 
 def plot_carry_vs_la(df: pd.DataFrame, fit: P.LiftFit, path, ev: float = 105.0) -> None:
@@ -90,7 +90,7 @@ def plot_france_distribution(df: pd.DataFrame, path) -> None:
 
     fig, ax = plt.subplots(figsize=(8, 5))
     # Anchor bins so the 344 ft fence lands exactly on a bin edge, keeping the
-    # cleared (red) region cleanly separated from the rest.
+    # cleared (gold) region cleanly separated from the rest.
     width = 8.0
     lo = C.FENCE_FT - width * np.ceil((C.FENCE_FT - carry.min()) / width)
     hi = C.FENCE_FT + width * np.ceil((carry.max() - C.FENCE_FT) / width) + width
@@ -191,7 +191,7 @@ def plot_park_map(path) -> None:
     ax.plot(
         [0, 360 * np.sin(rf)],
         [0, 360 * np.cos(rf)],
-        color=ACCENT,
+        color=GREEN,
         lw=2,
         ls="--",
         label=f"France line ({C.FRANCE_SPRAY:.0f} deg, wall {df_wall:.0f} ft)",
@@ -227,7 +227,7 @@ def plot_trajectory_profile(
     path after the strike comes down just inside the free flight, deep in left
     field short of the wall, consistent with the ball's Statcast distance. The
     344 ft fence (8 ft tall) is drawn to scale, and a rug shows the model's
-    landing distribution, red where it reaches the fence.
+    landing distribution, gold where it reaches the fence.
 
     Arguments:
         fit: The fitted physics model.
@@ -273,7 +273,7 @@ def plot_trajectory_profile(
     dcx, dcz, _, _, catch = P.post_cable_trajectory(
         C.FRANCE_EV, C.FRANCE_LA, cl0, rho_dome, cd=cd0, speed_retained=0.9
     )
-    ax.plot(dcx, dcz, ":", color="#6a6a6a", lw=1.9, label="path after the cable (estimated)")
+    ax.plot(dcx, dcz, ":", color=GREEN, lw=1.9, label="path after the cable (estimated)")
 
     # The 344 ft fence, 8 ft tall, to scale; labels to its right.
     ax.add_patch(plt.Rectangle((C.FENCE_FT, 0), 2.4, C.WALL_HEIGHT_FT, color=INK))
@@ -281,8 +281,8 @@ def plot_trajectory_profile(
     ax.annotate(f"{C.WALL_HEIGHT_FT:.0f} ft high", xy=(C.FENCE_FT + 6, 5), fontsize=9, color=INK)
 
     # Cable strike at the apex (best estimate), in gold so it reads as the cable.
-    ax.plot([apex_x - 13, apex_x + 13], [apex_z, apex_z], "-", color="#d99a2b", lw=3)
-    ax.plot(apex_x, apex_z, "o", color="#d99a2b", ms=8, markeredgecolor=INK, markeredgewidth=0.6)
+    ax.plot([apex_x - 13, apex_x + 13], [apex_z, apex_z], "-", color=GREEN, lw=3)
+    ax.plot(apex_x, apex_z, "o", color=GREEN, ms=8, markeredgecolor=INK, markeredgewidth=0.6)
     ax.annotate(
         f"clipped the roof cable near its apex\nbest estimate: ~{apex_z:.0f} ft up, {apex_x:.0f} ft out",
         xy=(apex_x, apex_z),
@@ -296,9 +296,9 @@ def plot_trajectory_profile(
     ax.plot(catch, 3, "o", color=INK, ms=6)
 
     # Shortfall from the free-flight landing to the fence.
-    ax.annotate("", xy=(C.FENCE_FT, 27), xytext=(land, 27), arrowprops=dict(arrowstyle="<->", color=GREEN, lw=1.4))
+    ax.annotate("", xy=(C.FENCE_FT, 27), xytext=(land, 27), arrowprops=dict(arrowstyle="<->", color=BLUE, lw=1.4))
     ax.annotate(f"{C.FENCE_FT - land:.0f} ft short", xy=((land + C.FENCE_FT) / 2, 27),
-                xytext=((land + C.FENCE_FT) / 2 - 14, 32), fontsize=9, color=GREEN)
+                xytext=((land + C.FENCE_FT) / 2 - 14, 32), fontsize=9, color=BLUE)
 
     # Landing distribution rug.
     if landing_samples is not None and len(landing_samples):
@@ -309,7 +309,7 @@ def plot_trajectory_profile(
         lab = "model landing distribution"
         if carry_p05 is not None:
             lab += f": 5th-95th pct {carry_p05:.0f}-{carry_p95:.0f} ft"
-        lab += f";  {frac * 100:.0f}% reach the fence (red)"
+        lab += f";  {frac * 100:.0f}% reach the fence (gold)"
         ax.annotate(lab, xy=(np.median(ss), -9), xytext=(55, -20), fontsize=8.5, color=BLUE)
 
     sub = "" if spin_rpm is None else f"   ·   estimated backspin ≈ {spin_rpm[0]:.0f}–{spin_rpm[1]:.0f} rpm"
