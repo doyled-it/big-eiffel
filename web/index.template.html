@@ -50,6 +50,9 @@ a:hover{border-bottom-color:var(--accent)}
 .tldr .tag{font-family:var(--mono);font-size:.6em;letter-spacing:.1em;text-transform:uppercase;color:var(--accent);
   border:1px solid var(--accent);border-radius:6px;padding:2px 7px;margin-right:11px;vertical-align:middle}
 .tldr b{color:var(--accent);font-weight:700}
+.replay{font-family:var(--mono);font-size:.76rem;padding:6px 13px;border-radius:999px;cursor:pointer;
+  border:1px solid var(--line);background:var(--bg);color:var(--accent);margin:0 0 6px}
+.replay:hover{border-color:var(--accent)}
 .lede b{color:var(--accent);font-weight:600}
 .stats{display:flex;flex-wrap:wrap;gap:14px;margin-top:28px}
 .stat{flex:1 1 180px;min-width:0;background:var(--surface);border:1px solid var(--line);
@@ -163,6 +166,7 @@ footer .mono{font-size:.78rem}
         <span><i class="swatch" style="background:var(--france)"></i>cable and path after</span>
         <span><i class="swatch" style="background:var(--fg)"></i>344 ft fence (8 ft)</span>
       </div>
+      <button class="replay" id="flightBtn">&#9654; watch the flight</button>
       <div class="chart-box" id="trajBox"></div>
       <p class="src">Source: the fitted drag-plus-Magnus model at the France launch (105.3 mph, 49&deg;), closed-roof air density, no wind. The dashed path after the cable is the model's own descent once a glancing speed loss at the apex is applied: it steepens under gravity while the backspin carries it forward. The cable height and the exact speed loss are estimates (a ball cannot clip a cable above its own apex, and a cable can only shorten a flight). The ground rug is the model's landing distribution over temperature and spin (5th-95th percentile 280 to 354 ft); Statcast's own projected distance for the ball was 323 ft.</p>
     </div>
@@ -497,18 +501,47 @@ function drawTrajectory(){
     <line class="sfk" x1="${X(T.landing_ft)}" y1="${Y(46)}" x2="${X(T.wall_ft)}" y2="${Y(46)}"/>
     <text x="${X((T.landing_ft+T.wall_ft)/2)}" y="${Y(52)}" text-anchor="middle" class="labg">${shortv} ft short</text>
     <line x1="${X(cx-16)}" y1="${Y(cz)}" x2="${X(cx+16)}" y2="${Y(cz)}" stroke="${france}" stroke-width="3"/>
-    <circle cx="${X(cx)}" cy="${Y(cz)}" r="5" fill="${france}" stroke="${fg}" stroke-width="0.8"/>
+    <circle id="cableMark" cx="${X(cx)}" cy="${Y(cz)}" r="5" fill="${france}" stroke="${fg}" stroke-width="0.8"/>
     <text x="${X(cx)}" y="${Y(cz+27)}" text-anchor="middle" class="lab">clipped the roof cable near its apex</text>
     <text x="${X(cx)}" y="${Y(cz+15)}" text-anchor="middle" class="lab">best estimate ~${Math.round(cz)} ft up, ${Math.round(cx)} ft out</text>
     <circle cx="${X(cpt)}" cy="${Y(3)}" r="4.5" fill="${fg}"/>
     <rect x="${X(0)-4}" y="${(+g-4).toFixed(1)}" width="8" height="8" fill="${fg}" transform="rotate(45 ${X(0)} ${g})"/>
     <text x="${X(8)}" y="${(+g-7).toFixed(1)}" text-anchor="start" class="lab">home</text>
     <text id="rugHint" x="${X(250)}" y="${(+g+36).toFixed(1)}" text-anchor="middle" class="hint">tap the ground marks for the full landing distribution</text>
+    <circle id="flightBall" r="5" fill="${acc}" stroke="${fg}" stroke-width="0.6" opacity="0"/>
   </svg>`;
   document.getElementById('trajBox').innerHTML=svg;
   const hit=document.getElementById('rugHit'), hint=document.getElementById('rugHint');
   if(hit) hit.addEventListener('click', openLandingModal);
   if(hint) hint.addEventListener('click', openLandingModal);
+
+  // Flight animation: the ball climbs the free-flight arc to the apex, the cable
+  // flashes, then it follows the brown deflected path down. Replayable.
+  const ball=document.getElementById('flightBall'), cableMark=document.getElementById('cableMark');
+  const up=[]; for(let i=0;i<T.x.length;i++){ if(T.x[i]<=cx+0.5) up.push([+X(T.x[i]),+Y(T.z[i])]); }
+  const down=cpx.map((x,i)=>[+X(x),+Y(cpz[i])]);
+  const pts=up.concat(down), apexIdx=Math.max(up.length-1,1);
+  let raf=null;
+  function playFlight(){
+    if(!ball||pts.length<2) return;
+    if(raf) cancelAnimationFrame(raf);
+    const DUR=2800, t0=performance.now(); ball.setAttribute('opacity','1');
+    (function frame(now){
+      let p=(now-t0)/DUR; if(p>1)p=1;
+      const e=p<0.5?2*p*p:1-Math.pow(-2*p+2,2)/2;          // easeInOutQuad
+      const fi=e*(pts.length-1), i=Math.min(Math.floor(fi),pts.length-2), f=fi-i;
+      const a=pts[i], b=pts[i+1];
+      ball.setAttribute('cx',(a[0]+(b[0]-a[0])*f).toFixed(1));
+      ball.setAttribute('cy',(a[1]+(b[1]-a[1])*f).toFixed(1));
+      ball.setAttribute('fill', fi<apexIdx ? acc : france);
+      if(cableMark) cableMark.setAttribute('r', Math.abs(fi-apexIdx)<1.5 ? '8' : '5');
+      if(p<1){ raf=requestAnimationFrame(frame); }
+      else { ball.setAttribute('opacity','0'); if(cableMark) cableMark.setAttribute('r','5'); }
+    })(t0);
+  }
+  window.__playFlight=playFlight;
+  const fbtn=document.getElementById('flightBtn'); if(fbtn) fbtn.onclick=playFlight;
+  if(!window.__flew && !window.matchMedia('(prefers-reduced-motion:reduce)').matches){ window.__flew=true; setTimeout(playFlight,500); }
 }
 
 function drawPark(){
