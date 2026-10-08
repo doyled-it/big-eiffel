@@ -182,6 +182,32 @@ def carry_vec(
     return rng
 
 
+def carry_from_knots(ev_mph, la_deg, rho_, dt: float = 0.004) -> np.ndarray:
+    """Vectorized physics carry using the stored fitted coefficients (no re-fit).
+
+    Builds Cl(LA) and kd(LA) from ``C.FIT_CL_VALUES`` / ``C.FIT_KD_VALUES`` at the
+    ``CL_KNOTS_LA`` knots and integrates each ball at its own air density. Lets a
+    reproducible "carry vs expected" be computed without fitting.
+
+    Arguments:
+        ev_mph: Exit velocities (array).
+        la_deg: Launch angles in degrees (array).
+        rho_: Per-ball air densities (array).
+        dt: Integration time step.
+
+    Returns:
+        Expected carry distances in feet (array).
+    """
+    kla = CL_KNOTS_LA
+    cli = PchipInterpolator(kla, np.asarray(C.FIT_CL_VALUES, float), extrapolate=True)
+    kdi = PchipInterpolator(kla, np.asarray(C.FIT_KD_VALUES, float), extrapolate=True)
+    la = np.asarray(la_deg, float)
+    lac = np.clip(la, kla.min(), kla.max())
+    cl = np.clip(cli(lac), 0.0, None)
+    cd = C.CD * np.clip(kdi(lac), 0.05, None)
+    return carry_vec(np.asarray(ev_mph, float), la, cl, np.asarray(rho_, float), cd, dt=dt)
+
+
 def post_cable_trajectory(
     ev_mph: float,
     la_deg: float,

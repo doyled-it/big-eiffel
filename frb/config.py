@@ -53,30 +53,92 @@ HF_FILE = "data/statcast_era_pitches.parquet"  # single ~826 MB parquet on main
 # Auto-converted parquet glob, used only by the direct-httpfs fallback path.
 HF_GLOB = "hf://datasets/Jensen-holm/statcast-era-pitches@~parquet/**/*.parquet"
 
-# Columns pulled from the raw parquet. Bat-tracking fields (attack_angle,
-# swing_path_tilt, bat_speed, swing_length) only exist from 2024 on.
+# Columns pulled from the raw parquet. A broad, additive set: identity, game
+# context, batted-ball tracking, Statcast expected stats, the pitch that was hit,
+# and bat tracking (attack_angle, swing_path_tilt, bat_speed, swing_length only
+# exist from 2024 on). Every name here must exist in both the HF mirror schema
+# and the Baseball Savant detail CSV.
 PULL_COLUMNS = [
+    # identity and game context
     "game_year",
     "game_date",
     "game_pk",
     "sv_id",
     "game_type",
     "home_team",
+    "away_team",
+    "player_name",  # the batter, "Last, First"
+    "batter",  # batter MLBAM id
+    "pitcher",  # pitcher MLBAM id
+    "inning",
+    "inning_topbot",
+    "outs_when_up",
+    "balls",
+    "strikes",
+    "on_1b",
+    "on_2b",
+    "on_3b",
+    "at_bat_number",
+    "pitch_number",
+    "home_score",
+    "away_score",
+    "bat_score",
+    "fld_score",
     "events",
+    "description",
+    "des",  # full play description
     "bb_type",
+    "hit_location",
+    "if_fielding_alignment",
+    "of_fielding_alignment",
     "stand",  # batter handedness (L/R), used to validate the spray sign
+    "p_throws",
+    # batted ball and outcome
     "launch_speed",
     "launch_angle",
     "hit_distance_sc",
     "hc_x",
     "hc_y",
     "launch_speed_angle",  # Statcast barrel classification code
+    "estimated_ba_using_speedangle",  # xBA
+    "estimated_woba_using_speedangle",  # xwOBA
+    "estimated_slg_using_speedangle",  # xSLG
+    "woba_value",
+    "babip_value",
+    "iso_value",
+    "delta_run_exp",
+    "delta_home_win_exp",
+    # bat tracking (2024+)
     "bat_speed",
     "swing_length",
     "attack_angle",
     "attack_direction",
     "swing_path_tilt",
+    # the pitch that was hit
+    "pitch_type",
+    "pitch_name",
+    "release_speed",
+    "release_spin_rate",
+    "effective_speed",
+    "release_extension",
+    "plate_x",
+    "plate_z",
+    "pfx_x",
+    "pfx_z",
+    "zone",
+    "spin_axis",
+    # player context
+    "age_bat",
+    "age_pit",
+    "n_thruorder_pitcher",
 ]
+
+# Fitted effective-lift (Cl) and drag-multiplier (kd) values at the launch-angle
+# knots in physics.CL_KNOTS_LA, from the density-aware fit. Stored so a "carry
+# vs expected" can be computed without re-fitting (e.g. for the published
+# dataset and the daily updater). Refresh if the fit is re-run materially.
+FIT_CL_VALUES = [0.05, 0.103, 0.143, 0.16, 0.154, 0.129, 0.098, 0.068, 0.05, 0.05, 0.05]
+FIT_KD_VALUES = [1.468, 1.347, 1.237, 1.145, 1.085, 1.068, 1.094, 1.162, 1.26, 1.372, 1.488]
 
 # --------------------------------------------------------------------------
 # The event: Ty France, NLDS Game 1, 2026-10-03, American Family Field (MIL),

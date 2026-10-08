@@ -13,9 +13,11 @@ from __future__ import annotations
 
 import argparse
 
+import numpy as np
 import pandas as pd
 
 from frb import config as C
+from frb import physics as P
 
 # Published columns, renamed to clean public names.
 RENAME = {
@@ -23,25 +25,87 @@ RENAME = {
     "rh_pct_use": "humidity_pct",
     "pressure_hpa_use": "pressure_hpa",
     "wind_along_mph": "wind_along_flight_mph",
+    "player_name": "batter_name",
+    "estimated_ba_using_speedangle": "xba",
+    "estimated_woba_using_speedangle": "xwoba",
+    "estimated_slg_using_speedangle": "xslg",
 }
 PUBLISH_COLS = [
+    # identity and game context
     "game_pk",
     "game_date",
     "game_year",
     "game_type",
     "home_team",
+    "away_team",
     "venue_id",
+    "batter_name",
+    "batter",
+    "pitcher",
     "stand",
+    "p_throws",
+    "inning",
+    "inning_topbot",
+    "outs_when_up",
+    "balls",
+    "strikes",
+    "on_1b",
+    "on_2b",
+    "on_3b",
+    "at_bat_number",
+    "pitch_number",
+    "home_score",
+    "away_score",
+    "bat_score",
+    "fld_score",
     "events",
+    "description",
+    "des",
     "bb_type",
+    "hit_location",
+    "if_fielding_alignment",
+    "of_fielding_alignment",
+    # batted ball and outcome
     "launch_speed",
     "launch_angle",
     "spray_deg",
     "hit_distance_sc",
+    "launch_speed_angle",
+    "is_barrel",
+    "xba",
+    "xwoba",
+    "xslg",
+    "woba_value",
+    "babip_value",
+    "iso_value",
+    "delta_run_exp",
+    "delta_home_win_exp",
+    "carry_vs_expected_ft",
+    # bat tracking (2024+)
     "bat_speed",
     "swing_length",
     "attack_angle",
+    "attack_direction",
     "swing_path_tilt",
+    "undercut_deg",
+    # the pitch that was hit
+    "pitch_type",
+    "pitch_name",
+    "release_speed",
+    "release_spin_rate",
+    "effective_speed",
+    "release_extension",
+    "plate_x",
+    "plate_z",
+    "pfx_x",
+    "pfx_z",
+    "zone",
+    "spin_axis",
+    # player context
+    "age_bat",
+    "age_pit",
+    "n_thruorder_pitcher",
+    # conditions (weather)
     "roof_type",
     "roof_closed",
     "elevation_m",
@@ -85,26 +149,42 @@ holds daily partitions appended through the season.
 
 ## What is here
 
-- **Batted ball** (MLB Statcast): exit velocity, launch angle, derived spray
-  angle, projected hit distance, batted-ball type, batter handedness, and the
-  bat-tracking fields where available (2024+).
-- **Game conditions** (MLB StatsAPI): roof type and a roof-closed flag, and the
-  venue.
-- **Air density** computed from temperature, relative humidity, and surface
-  pressure. Temperature is the official game report where present; humidity and
-  pressure come from Open-Meteo's hourly reanalysis at the park, matched to the
-  game hour. Roof-closed games use controlled still air at 72 F.
-- **Wind** as MLB reports it (speed and a field-relative direction such as "Out
-  To CF"), plus `wind_along_flight_mph`, the component along each ball's own
-  flight direction (positive is a tailwind). Zero for roof-closed games.
+Each row is one batted ball with its full Statcast context, plus the conditions
+it was hit in:
+
+- **Identity and game state**: batter and pitcher (names and ids), both teams,
+  inning, count, outs, baserunners, score, and the play description.
+- **Batted ball**: exit velocity, launch angle, derived spray angle, projected
+  hit distance, the Statcast barrel code and an `is_barrel` flag, and bat
+  tracking where available (2024+): bat speed, attack angle, swing path tilt,
+  swing length, plus a derived `undercut_deg` (the backspin driver).
+- **Expected outcomes** (Statcast models): `xba`, `xwoba`, `xslg`, plus
+  `woba_value`, `babip_value`, `iso_value`, and the run- and win-expectancy
+  deltas. A derived `carry_vs_expected_ft` gives how far the ball carried versus
+  a physics model evaluated at its own air density.
+- **The pitch that was hit**: type, release speed and spin, movement, plate
+  location, zone, and spin axis.
+- **Conditions**: roof state and a roof-closed flag; true **air density** from
+  temperature, relative humidity, and surface pressure (official game-report
+  temperature where present, humidity and pressure from Open-Meteo's hourly
+  reanalysis at the park); and **wind** as MLB reports it plus
+  `wind_along_flight_mph`, the component along each ball's own flight direction.
+  Roof-closed games use controlled still air at 72 F with no wind.
 
 ## Key columns
 
 | column | meaning |
 |---|---|
+| `batter_name`, `batter`, `pitcher` | batter name, batter id, pitcher id |
 | `launch_speed`, `launch_angle` | exit velocity (mph), launch angle (deg) |
 | `spray_deg` | spray angle; negative toward left field |
 | `hit_distance_sc` | Statcast projected carry (ft) |
+| `is_barrel` | True for a Statcast "barrel" |
+| `xba`, `xwoba`, `xslg` | Statcast expected stats from exit velocity and angle |
+| `carry_vs_expected_ft` | carry minus the physics model at this ball's air density |
+| `undercut_deg` | launch angle minus attack angle (2024+); the backspin driver |
+| `attack_angle`, `bat_speed` | bat tracking (2024+) |
+| `pitch_type`, `release_speed`, `release_spin_rate` | the pitch that was hit |
 | `air_density` | computed air density (kg/m^3) |
 | `wind_along_flight_mph` | along-flight wind; positive aids carry |
 | `roof_closed` | True when played in still, controlled air |
@@ -128,11 +208,27 @@ Built with https://github.com/doyled-it/big-eiffel
 
 
 def clean_frame(df: pd.DataFrame) -> pd.DataFrame:
-    """Apply the public column names and selection to an enriched frame."""
+    """Apply the public names, add derived columns, and select for publishing."""
     # Drop the raw Open-Meteo columns so the resolved *_use columns can take
     # their clean public names without colliding.
     df = df.drop(columns=[c for c in ("temp_f", "rh_pct", "pressure_hpa") if c in df.columns])
     df = df.rename(columns=RENAME)
+
+    # Derived columns.
+    if "launch_speed_angle" in df.columns:
+        df["is_barrel"] = df["launch_speed_angle"].eq(6)  # Statcast barrel code
+    if {"launch_angle", "attack_angle"} <= set(df.columns):
+        df["undercut_deg"] = df["launch_angle"] - df["attack_angle"]  # 2024+ spin driver
+    if {"launch_speed", "launch_angle", "air_density", "hit_distance_sc"} <= set(df.columns):
+        # How far the ball went versus the fitted physics model at its own air
+        # density (positive means it carried past expectation). No re-fit.
+        exp = P.carry_from_knots(
+            df["launch_speed"].to_numpy(float),
+            df["launch_angle"].to_numpy(float),
+            df["air_density"].to_numpy(float),
+        )
+        df["carry_vs_expected_ft"] = np.round(df["hit_distance_sc"].to_numpy(float) - exp, 1)
+
     cols = [c for c in PUBLISH_COLS if c in df.columns]
     return df[cols].copy()
 
