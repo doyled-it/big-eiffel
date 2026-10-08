@@ -70,6 +70,7 @@ PULL_COLUMNS = [
     "player_name",  # the batter, "Last, First"
     "batter",  # batter MLBAM id
     "pitcher",  # pitcher MLBAM id
+    "fielder_2",  # catcher MLBAM id (for a future pop-time join)
     "inning",
     "inning_topbot",
     "outs_when_up",
@@ -114,6 +115,8 @@ PULL_COLUMNS = [
     "attack_angle",
     "attack_direction",
     "swing_path_tilt",
+    "intercept_ball_minus_batter_pos_x_inches",  # swing geometry at contact
+    "intercept_ball_minus_batter_pos_y_inches",
     # the pitch that was hit
     "pitch_type",
     "pitch_name",
@@ -121,16 +124,33 @@ PULL_COLUMNS = [
     "release_spin_rate",
     "effective_speed",
     "release_extension",
+    "release_pos_x",  # release point (arm slot / height)
+    "release_pos_y",
+    "release_pos_z",
+    "arm_angle",
+    "vx0",  # 9-parameter pitch trajectory at y=50 ft
+    "vy0",
+    "vz0",
+    "ax",
+    "ay",
+    "az",
     "plate_x",
     "plate_z",
+    "sz_top",  # the batter's strike-zone top/bottom this pitch
+    "sz_bot",
     "pfx_x",
     "pfx_z",
+    "api_break_z_with_gravity",  # gravity-removed vertical/horizontal break
+    "api_break_x_arm",
+    "api_break_x_batter_in",
     "zone",
     "spin_axis",
     # player context
     "age_bat",
     "age_pit",
     "n_thruorder_pitcher",
+    "pitcher_days_since_prev_game",  # rest
+    "batter_days_since_prev_game",
 ]
 
 # Fitted effective-lift (Cl) and drag-multiplier (kd) values at the launch-angle

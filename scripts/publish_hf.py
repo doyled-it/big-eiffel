@@ -29,6 +29,7 @@ RENAME = {
     "estimated_ba_using_speedangle": "xba",
     "estimated_woba_using_speedangle": "xwoba",
     "estimated_slg_using_speedangle": "xslg",
+    "fielder_2": "catcher",
 }
 PUBLISH_COLS = [
     # identity and game context
@@ -42,8 +43,10 @@ PUBLISH_COLS = [
     "batter_name",
     "batter",
     "pitcher",
+    "catcher",
     "stand",
     "p_throws",
+    "batter_platoon_adv",
     "inning",
     "inning_topbot",
     "outs_when_up",
@@ -72,6 +75,10 @@ PUBLISH_COLS = [
     "hit_distance_sc",
     "launch_speed_angle",
     "is_barrel",
+    "hard_hit",
+    "sweet_spot",
+    "batted_direction",
+    "in_strike_zone",
     "xba",
     "xwoba",
     "xslg",
@@ -88,6 +95,8 @@ PUBLISH_COLS = [
     "attack_direction",
     "swing_path_tilt",
     "launch_minus_attack_deg",
+    "intercept_ball_minus_batter_pos_x_inches",
+    "intercept_ball_minus_batter_pos_y_inches",
     # the pitch that was hit
     "pitch_type",
     "pitch_name",
@@ -95,27 +104,46 @@ PUBLISH_COLS = [
     "release_spin_rate",
     "effective_speed",
     "release_extension",
+    "release_pos_x",
+    "release_pos_y",
+    "release_pos_z",
+    "arm_angle",
+    "vx0",
+    "vy0",
+    "vz0",
+    "ax",
+    "ay",
+    "az",
     "plate_x",
     "plate_z",
+    "sz_top",
+    "sz_bot",
     "pfx_x",
     "pfx_z",
+    "api_break_z_with_gravity",
+    "api_break_x_arm",
+    "api_break_x_batter_in",
     "zone",
     "spin_axis",
     # player context
     "age_bat",
     "age_pit",
     "n_thruorder_pitcher",
+    "pitcher_days_since_prev_game",
+    "batter_days_since_prev_game",
     # conditions (weather)
     "roof_type",
     "roof_closed",
     "elevation_m",
     "temperature_f",
     "humidity_pct",
+    "dew_point_f",
     "pressure_hpa",
     "air_density",
     "wind_mph",
     "wind_dir",
     "wind_along_flight_mph",
+    "humidor",
 ]
 
 CARD = """---
@@ -157,20 +185,26 @@ it was hit in:
 - **Batted ball**: exit velocity, launch angle, derived spray angle, projected
   hit distance, the Statcast barrel code and an `is_barrel` flag, and bat
   tracking where available (2024+): bat speed, attack angle, swing path tilt,
-  swing length, plus a derived `launch_minus_attack_deg` (positive = undercut/backspin,
-  negative = overcut/topspin).
+  swing length, swing-intercept offsets, plus derived `launch_minus_attack_deg`
+  (positive = undercut/backspin, negative = overcut/topspin), `hard_hit`
+  (>= 95 mph), `sweet_spot` (8 to 32 deg), and `batted_direction` (pull/center/oppo).
 - **Expected outcomes** (Statcast models): `xba`, `xwoba`, `xslg`, plus
   `woba_value`, `babip_value`, `iso_value`, and the run- and win-expectancy
   deltas. A derived `carry_vs_expected_ft` gives how far the ball carried versus
   a physics model evaluated at its own air density.
-- **The pitch that was hit**: type, release speed and spin, movement, plate
-  location, zone, and spin axis.
+- **The pitch that was hit**: type, release speed and spin, the release point and
+  `arm_angle`, the full trajectory (`vx0..az`), movement (`pfx`, `api_break_*`),
+  plate location, the batter's strike zone (`sz_top`/`sz_bot`), zone, and spin
+  axis. `in_strike_zone` flags whether that pitch was a strike by location (so a
+  False is a chase). This is a batted-ball dataset, so there are no taken pitches
+  and no umpire ball/strike calls to compare against.
 - **Conditions**: roof state and a roof-closed flag; true **air density** from
   temperature, relative humidity, and surface pressure (official game-report
   temperature where present, humidity and pressure from Open-Meteo's hourly
-  reanalysis at the park); and **wind** as MLB reports it plus
-  `wind_along_flight_mph`, the component along each ball's own flight direction.
-  Roof-closed games use controlled still air at 72 F with no wind.
+  reanalysis at the park), plus a derived `dew_point_f` and a `humidor` park flag;
+  and **wind** as MLB reports it plus `wind_along_flight_mph`, the component along
+  each ball's own flight direction. Roof-closed games use controlled still air at
+  72 F with no wind.
 
 ## Key columns
 
@@ -184,9 +218,13 @@ it was hit in:
 | `xba`, `xwoba`, `xslg` | Statcast expected stats from exit velocity and angle |
 | `carry_vs_expected_ft` | carry minus the physics model at this ball's air density |
 | `launch_minus_attack_deg` | launch minus attack angle (2024+); + undercut/backspin, - overcut/topspin |
+| `hard_hit`, `sweet_spot`, `batted_direction` | >= 95 mph; 8-32 deg; pull/center/oppo |
 | `attack_angle`, `bat_speed` | bat tracking (2024+) |
 | `pitch_type`, `release_speed`, `release_spin_rate` | the pitch that was hit |
-| `air_density` | computed air density (kg/m^3) |
+| `arm_angle`, `release_pos_x/y/z` | arm slot and release point |
+| `in_strike_zone` | True if the hit pitch was a strike by location (False = chase) |
+| `batter_platoon_adv` | True when batter and pitcher throw opposite hands |
+| `air_density`, `dew_point_f`, `humidor` | air density (kg/m^3), dew point (F), humidor park |
 | `wind_along_flight_mph` | along-flight wind; positive aids carry |
 | `roof_closed` | True when played in still, controlled air |
 
@@ -206,6 +244,31 @@ sources above.
 
 Built with https://github.com/doyled-it/big-eiffel
 """
+
+
+def _dew_point_f(temp_f, rh_pct):
+    """Dew point (F) from temperature (F) and relative humidity (%), Magnus formula."""
+    tc = (np.asarray(temp_f, float) - 32.0) * 5.0 / 9.0
+    rh = np.clip(np.asarray(rh_pct, float), 1.0, 100.0) / 100.0
+    a, b = 17.625, 243.04
+    gamma = np.log(rh) + a * tc / (b + tc)
+    td_c = b * gamma / (a - gamma)
+    return np.round(td_c * 9.0 / 5.0 + 32.0, 1)
+
+
+def _humidor(team, year) -> bool:
+    """Whether the home park used a ball humidor (documented cases only)."""
+    try:
+        y = int(year)
+    except (TypeError, ValueError):
+        return False
+    if y >= 2022:  # MLB mandated humidors in all 30 parks in 2022
+        return True
+    if team == "COL":  # Coors Field since 2002
+        return True
+    if team == "ARI" and y >= 2018:  # Chase Field since 2018
+        return True
+    return False
 
 
 def clean_frame(df: pd.DataFrame) -> pd.DataFrame:
@@ -232,6 +295,33 @@ def clean_frame(df: pd.DataFrame) -> pd.DataFrame:
             df["air_density"].to_numpy(float),
         )
         df["carry_vs_expected_ft"] = np.round(df["hit_distance_sc"].to_numpy(float) - exp, 1)
+
+    # Hitting flags.
+    if "launch_speed" in df.columns:
+        df["hard_hit"] = df["launch_speed"] >= 95.0
+    if "launch_angle" in df.columns:
+        df["sweet_spot"] = df["launch_angle"].between(8, 32)
+    if {"spray_deg", "stand"} <= set(df.columns):
+        # Positive means pulled, accounting for handedness (RH pulls to LF, negative spray).
+        pull = np.where(df["stand"].to_numpy() == "R", -1.0, 1.0) * df["spray_deg"].to_numpy(float)
+        df["batted_direction"] = np.select([pull > 15, pull < -15], ["pull", "oppo"], default="center")
+        df.loc[df["spray_deg"].isna() | df["stand"].isna(), "batted_direction"] = None
+    if {"stand", "p_throws"} <= set(df.columns):
+        pa = pd.Series(df["stand"].to_numpy() != df["p_throws"].to_numpy(), index=df.index, dtype="boolean")
+        df["batter_platoon_adv"] = pa.mask(df["stand"].isna() | df["p_throws"].isna())  # opposite hands = advantage
+    if {"plate_x", "plate_z", "sz_top", "sz_bot"} <= set(df.columns):
+        # Was the pitch that was hit in the rulebook zone (a strike by location)?
+        px, pz = df["plate_x"].to_numpy(float), df["plate_z"].to_numpy(float)
+        zt, zb = df["sz_top"].to_numpy(float), df["sz_bot"].to_numpy(float)
+        iz = pd.Series((np.abs(px) <= 0.83) & (pz >= zb) & (pz <= zt), index=df.index, dtype="boolean")
+        miss = df["plate_x"].isna() | df["plate_z"].isna() | df["sz_top"].isna() | df["sz_bot"].isna()
+        df["in_strike_zone"] = iz.mask(miss)
+
+    # Conditions.
+    if {"temperature_f", "humidity_pct"} <= set(df.columns):
+        df["dew_point_f"] = _dew_point_f(df["temperature_f"].to_numpy(float), df["humidity_pct"].to_numpy(float))
+    if {"home_team", "game_year"} <= set(df.columns):
+        df["humidor"] = [_humidor(t, y) for t, y in zip(df["home_team"], df["game_year"])]
 
     cols = [c for c in PUBLISH_COLS if c in df.columns]
     return df[cols].copy()
