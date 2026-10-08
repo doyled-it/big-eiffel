@@ -51,6 +51,10 @@ a:hover{border-bottom-color:var(--accent)}
 .hero{padding-block:48px 28px;border-bottom:1px solid var(--line)}
 .hero h1{font-size:clamp(2.6rem,9vw,4.4rem);font-weight:700;margin:0 0 20px;letter-spacing:-.5px}
 .lede{font-size:1.18rem;color:var(--fg)}
+.tldr{font-family:var(--display);font-weight:600;font-size:clamp(1.3rem,4.6vw,1.7rem);line-height:1.22;margin:2px 0 18px}
+.tldr .tag{font-family:var(--mono);font-size:.6em;letter-spacing:.1em;text-transform:uppercase;color:var(--accent);
+  border:1px solid var(--accent);border-radius:6px;padding:2px 7px;margin-right:11px;vertical-align:middle}
+.tldr b{color:var(--accent);font-weight:700}
 .lede b{color:var(--accent);font-weight:600}
 .stats{display:flex;flex-wrap:wrap;gap:14px;margin-top:28px}
 .stat{flex:1 1 180px;min-width:0;background:var(--surface);border:1px solid var(--line);
@@ -120,6 +124,7 @@ footer .mono{font-size:.78rem}
   <header class="hero">
     <p class="eyebrow">NLDS Game 1 &middot; American Family Field &middot; October 2026</p>
     <h1>Would it have gone out?</h1>
+    <p class="tldr"><span class="tag">tl;dr</span><b>Probably not</b>, but that doesn't mean no.</p>
     <p class="lede">Ty France hit a ball 105.3 mph at 49 degrees down the left-field line. It clipped a roof support cable near the top of its arc and was caught in left. Absent the cable, that ball <b>reaches</b> the 344 foot fence about one time in eight, and <b>clears</b> it for a home run about half as often.</p>
     <div class="stats">
       <div class="stat hr">
@@ -286,6 +291,7 @@ footer .mono{font-size:.78rem}
 
   <footer>
     <p>Most likely a long out: about a one-in-eight shot to reach the fence, closer to one in sixteen to clear it for a home run.</p>
+    <p>For the record, I am a Padres fan, so calling France's ball short is me betting against my own guy. That is rather the point: the "probably not" is the data talking, not me.</p>
     <p class="mono">Data: MLB Statcast (2015-2025 via the Jensen-holm HuggingFace mirror, 2026 from Baseball Savant), game weather and roof from the MLB StatsAPI, humidity and pressure from Open-Meteo. Enriched dataset: <a href="https://huggingface.co/datasets/doyled-it/statcast-batted-balls-weather">doyled-it/statcast-batted-balls-weather</a>. Code and tests: <a href="https://github.com/doyled-it/big-eiffel">github.com/doyled-it/big-eiffel</a></p>
   </footer>
 
