@@ -68,6 +68,8 @@ PUBLISH_COLS = [
     "hit_location",
     "if_fielding_alignment",
     "of_fielding_alignment",
+    "day_night",
+    "hp_umpire",
     # batted ball and outcome
     "launch_speed",
     "launch_angle",
@@ -131,6 +133,16 @@ PUBLISH_COLS = [
     "n_thruorder_pitcher",
     "pitcher_days_since_prev_game",
     "batter_days_since_prev_game",
+    # running, fielding, and park context (Savant season leaderboards)
+    "batter_sprint_speed",
+    "runner_1b_sprint_speed",
+    "runner_2b_sprint_speed",
+    "runner_3b_sprint_speed",
+    "catcher_pop_time",
+    "catcher_arm_strength",
+    "park_factor_runs",
+    "park_factor_hr",
+    "park_factor_woba",
     # conditions (weather)
     "roof_type",
     "roof_closed",
@@ -143,6 +155,9 @@ PUBLISH_COLS = [
     "wind_mph",
     "wind_dir",
     "wind_along_flight_mph",
+    "wind_gust_mph",
+    "precipitation_mm",
+    "cloud_cover_pct",
     "humidor",
 ]
 
@@ -181,7 +196,8 @@ Each row is one batted ball with its full Statcast context, plus the conditions
 it was hit in:
 
 - **Identity and game state**: batter and pitcher (names and ids), both teams,
-  inning, count, outs, baserunners, score, and the play description.
+  inning, count, outs, baserunners, score, the play description, whether it was
+  a day or night game, and the home-plate umpire.
 - **Batted ball**: exit velocity, launch angle, derived spray angle, projected
   hit distance, the Statcast barrel code and an `is_barrel` flag, and bat
   tracking where available (2024+): bat speed, attack angle, swing path tilt,
@@ -192,6 +208,12 @@ it was hit in:
   `woba_value`, `babip_value`, `iso_value`, and the run- and win-expectancy
   deltas. A derived `carry_vs_expected_ft` gives how far the ball carried versus
   a physics model evaluated at its own air density.
+- **Running, fielding, and park** (season-level, from Savant leaderboards): the
+  batter's and each baserunner's `sprint_speed` (ft/s), the catcher's
+  `pop_time` to second (s) and `arm_strength` (mph), and the park's run,
+  home-run, and wOBA factors (`park_factor_*`, 100 is neutral, Savant's 3-year
+  rolling window through that season). These are the player's or park's number
+  for the season, not a per-pitch measurement.
 - **The pitch that was hit**: type, release speed and spin, the release point and
   `arm_angle`, the full trajectory (`vx0..az`), movement (`pfx`, `api_break_*`),
   plate location, the batter's strike zone (`sz_top`/`sz_bot`), zone, and spin
@@ -204,7 +226,9 @@ it was hit in:
   reanalysis at the park), plus a derived `dew_point_f` and a `humidor` park flag;
   and **wind** as MLB reports it plus `wind_along_flight_mph`, the component along
   each ball's own flight direction. Roof-closed games use controlled still air at
-  72 F with no wind.
+  72 F with no wind. Ambient `wind_gust_mph`, `precipitation_mm`, and
+  `cloud_cover_pct` come from the Open-Meteo hour and describe the outdoor weather
+  regardless of roof state (so a closed-roof game still reports the sky outside).
 
 ## Key columns
 
@@ -224,16 +248,23 @@ it was hit in:
 | `arm_angle`, `release_pos_x/y/z` | arm slot and release point |
 | `in_strike_zone` | True if the hit pitch was a strike by location (False = chase) |
 | `batter_platoon_adv` | True when batter and pitcher throw opposite hands |
+| `day_night`, `hp_umpire` | day or night game; home-plate umpire |
+| `batter_sprint_speed`, `runner_*_sprint_speed` | sprint speed (ft/s), season level |
+| `catcher_pop_time`, `catcher_arm_strength` | catcher pop time to 2B (s) and arm (mph), season level |
+| `park_factor_runs`, `park_factor_hr`, `park_factor_woba` | park factors (100 = neutral, 3-year rolling) |
 | `air_density`, `dew_point_f`, `humidor` | air density (kg/m^3), dew point (F), humidor park |
 | `wind_along_flight_mph` | along-flight wind; positive aids carry |
+| `wind_gust_mph`, `precipitation_mm`, `cloud_cover_pct` | ambient outdoor gusts, rain, cloud (Open-Meteo) |
 | `roof_closed` | True when played in still, controlled air |
 
 ## Sources and caveats
 
 - Statcast via Baseball Savant (2015-2025 through the
   `Jensen-holm/statcast-era-pitches` mirror, 2026 pulled directly from Savant).
-- Game weather and roof from the MLB StatsAPI schedule.
+- Game weather, roof, day/night, and umpire from the MLB StatsAPI schedule.
 - Humidity and pressure from the Open-Meteo historical reanalysis archive.
+- Sprint speed, pop time, and park factors from Baseball Savant leaderboards
+  (season level; park factors are the 3-year rolling index through that season).
 
 Caveats: the reported wind is a station or grid reading, not the wind inside the
 stadium bowl, so `wind_along_flight_mph` overstates the wind the ball truly

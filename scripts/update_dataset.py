@@ -23,13 +23,19 @@ import pandas as pd
 import requests
 
 from frb import config as C
+from frb import context as ctx
 from frb import data as D
 from frb import weather as W
 from scripts.publish_hf import clean_frame
 
 
 def _mlb_games_for_date(date_str: str) -> pd.DataFrame:
-    params = {"sportId": 1, "date": date_str, "gameType": "R,F,D,L,W", "hydrate": "weather,venue(location,fieldInfo)"}
+    params = {
+        "sportId": 1,
+        "date": date_str,
+        "gameType": "R,F,D,L,W",
+        "hydrate": "weather,venue(location,fieldInfo),officials",
+    }
     r = requests.get(W.MLB_SCHEDULE, params=params, timeout=120, headers=W.UA)
     r.raise_for_status()
     rows = []
@@ -53,6 +59,8 @@ def _mlb_games_for_date(date_str: str) -> pd.DataFrame:
                     "mlb_condition": w.get("condition"),
                     "wind_mph": spd,
                     "wind_dir": wdir,
+                    "day_night": g.get("dayNight"),
+                    "hp_umpire": W.home_plate_umpire(g.get("officials")),
                 }
             )
     g = pd.DataFrame(rows).dropna(subset=["game_pk"])
@@ -75,8 +83,9 @@ def _openmeteo_for_date(games: pd.DataFrame, date_str: str) -> pd.DataFrame:
             "longitude": row.lon,
             "start_date": date_str,
             "end_date": date_str,
-            "hourly": "temperature_2m,relative_humidity_2m,surface_pressure",
+            "hourly": W.OPENMETEO_HOURLY,
             "temperature_unit": "fahrenheit",
+            "windspeed_unit": "mph",
             "timezone": "UTC",
         }
         try:
@@ -92,16 +101,25 @@ def _openmeteo_for_date(games: pd.DataFrame, date_str: str) -> pd.DataFrame:
                         "temp_f": h["temperature_2m"],
                         "rh_pct": h["relative_humidity_2m"],
                         "pressure_hpa": h["surface_pressure"],
+                        "wind_gust_mph": h["wind_gusts_10m"],
+                        "precipitation_mm": h["precipitation"],
+                        "cloud_cover_pct": h["cloud_cover"],
                     }
                 )
             )
         except requests.RequestException:
             continue
-    return (
-        pd.concat(frames, ignore_index=True)
-        if frames
-        else pd.DataFrame(columns=["venue_id", "game_hour", "temp_f", "rh_pct", "pressure_hpa"])
-    )
+    cols = [
+        "venue_id",
+        "game_hour",
+        "temp_f",
+        "rh_pct",
+        "pressure_hpa",
+        "wind_gust_mph",
+        "precipitation_mm",
+        "cloud_cover_pct",
+    ]
+    return pd.concat(frames, ignore_index=True) if frames else pd.DataFrame(columns=cols)
 
 
 def enrich_date(date_str: str) -> pd.DataFrame | None:
@@ -134,6 +152,8 @@ def enrich_date(date_str: str) -> pd.DataFrame | None:
         df["wind_mph"].fillna(0).to_numpy(), df["wind_dir"].fillna("Calm").to_numpy(), df["spray_deg"].to_numpy()
     )
     df["wind_along_mph"] = np.where(closed, 0.0, along)
+    # Running, fielding, and park context; refresh the in-season leaderboard.
+    df = ctx.attach_context(df, refresh_current_year=True)
     return clean_frame(df)
 
 
