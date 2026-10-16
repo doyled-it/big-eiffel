@@ -46,6 +46,23 @@ WIND_DIR_VEC = {
 }
 
 
+def home_plate_umpire(officials) -> str | None:
+    """Home-plate umpire's full name from a schedule game's officials list.
+
+    Arguments:
+        officials: The game's ``officials`` list (from the ``officials`` hydrate).
+
+    Returns:
+        The home-plate umpire's name, or None if unavailable.
+    """
+    if not isinstance(officials, list):
+        return None
+    for o in officials:
+        if (o or {}).get("officialType") == "Home Plate":
+            return (o.get("official") or {}).get("fullName")
+    return None
+
+
 def parse_wind(s: str) -> tuple[float, str]:
     """Parse an MLB wind string into (speed_mph, field_direction).
 
@@ -131,7 +148,7 @@ def fetch_mlb_games(start_year: int = 2015, end_year: int = 2026, force: bool = 
             "startDate": f"{year}-03-01",
             "endDate": f"{year}-11-30",
             "gameType": "R,F,D,L,W",
-            "hydrate": "weather,venue(location,fieldInfo)",
+            "hydrate": "weather,venue(location,fieldInfo),officials",
         }
         r = requests.get(MLB_SCHEDULE, params=params, timeout=120, headers=UA)
         r.raise_for_status()
@@ -159,6 +176,8 @@ def fetch_mlb_games(start_year: int = 2015, end_year: int = 2026, force: bool = 
                         "mlb_condition": w.get("condition"),
                         "wind_mph": spd,
                         "wind_dir": wdir,
+                        "day_night": g.get("dayNight"),
+                        "hp_umpire": home_plate_umpire(g.get("officials")),
                     }
                 )
                 n += 1
@@ -171,11 +190,18 @@ def fetch_mlb_games(start_year: int = 2015, end_year: int = 2026, force: bool = 
     return df
 
 
+# Hourly Open-Meteo variables. The first three set air density; the last three
+# are additive ambient conditions (gusts, rain, cloud) that outdoor play feels.
+OPENMETEO_HOURLY = "temperature_2m,relative_humidity_2m,surface_pressure,wind_gusts_10m,precipitation,cloud_cover"
+
+
 def fetch_openmeteo_for_venues(games: pd.DataFrame, force: bool = False) -> pd.DataFrame:
-    """Hourly humidity and pressure per venue from Open-Meteo.
+    """Hourly weather per venue from Open-Meteo.
 
     One request per distinct venue over the full date range. Cached per venue
-    under data/openmeteo_<venue_id>.parquet and returned concatenated.
+    under data/openmeteo_<venue_id>.parquet and returned concatenated. Covers
+    the density inputs (temperature, humidity, pressure) plus ambient wind
+    gusts, precipitation, and cloud cover.
 
     Arguments:
         games: The MLB games table (for venue coordinates).
@@ -183,7 +209,7 @@ def fetch_openmeteo_for_venues(games: pd.DataFrame, force: bool = False) -> pd.D
 
     Returns:
         Long table: venue_id, time_utc (hourly), temp_f, rh_pct, pressure_hpa,
-        wind_mph, wind_dir_deg.
+        wind_gust_mph, precipitation_mm, cloud_cover_pct.
     """
     venues = games.dropna(subset=["lat", "lon"]).groupby("venue_id").agg(lat=("lat", "first"), lon=("lon", "first"))
     frames = []
@@ -196,10 +222,10 @@ def fetch_openmeteo_for_venues(games: pd.DataFrame, force: bool = False) -> pd.D
             "latitude": row.lat,
             "longitude": row.lon,
             "start_date": "2015-03-01",
-            "end_date": "2026-09-30",  # archive reanalysis lags a few days; season ends late Sept
-            # Only the variables that set air density; wind comes from MLB (field-relative).
-            "hourly": "temperature_2m,relative_humidity_2m,surface_pressure",
+            "end_date": "2026-10-05",  # archive reanalysis lags a few days; grab early-Oct postseason where available
+            "hourly": OPENMETEO_HOURLY,
             "temperature_unit": "fahrenheit",
+            "windspeed_unit": "mph",
             "timezone": "UTC",
         }
         # The archive weighs long hourly ranges heavily, so retry 429 with backoff.
@@ -222,6 +248,9 @@ def fetch_openmeteo_for_venues(games: pd.DataFrame, force: bool = False) -> pd.D
                 "temp_f": h["temperature_2m"],
                 "rh_pct": h["relative_humidity_2m"],
                 "pressure_hpa": h["surface_pressure"],
+                "wind_gust_mph": h["wind_gusts_10m"],
+                "precipitation_mm": h["precipitation"],
+                "cloud_cover_pct": h["cloud_cover"],
             }
         )
         part.to_parquet(cache, index=False)
@@ -286,12 +315,25 @@ def build_enriched(force: bool = False) -> pd.DataFrame:
             "mlb_condition": g["mlb_condition"],
             "wind_mph": g["wind_mph"],
             "wind_dir": g["wind_dir"],
+            "day_night": g["day_night"],
+            "hp_umpire": g["hp_umpire"],
         }
     )
     df = balls.merge(meta, left_on="game_pk", right_index=True, how="left")
 
-    # Attach Open-Meteo humidity/pressure/temp at the game hour.
-    omk = om.rename(columns={"time_utc": "game_hour"})[["venue_id", "game_hour", "temp_f", "rh_pct", "pressure_hpa"]]
+    # Attach Open-Meteo humidity/pressure/temp and ambient conditions at the game hour.
+    om = om.rename(columns={"time_utc": "game_hour"})
+    om_cols = [
+        "venue_id",
+        "game_hour",
+        "temp_f",
+        "rh_pct",
+        "pressure_hpa",
+        "wind_gust_mph",
+        "precipitation_mm",
+        "cloud_cover_pct",
+    ]
+    omk = om[[c for c in om_cols if c in om.columns]]
     df = df.merge(omk, on=["venue_id", "game_hour"], how="left", suffixes=("", "_om"))
 
     df["roof_closed"] = [_roof_closed(rt, cond) for rt, cond in zip(df["roof_type"], df["mlb_condition"])]
@@ -320,6 +362,11 @@ def build_enriched(force: bool = False) -> pd.DataFrame:
         df["wind_mph"].fillna(0).to_numpy(), df["wind_dir"].fillna("Calm").to_numpy(), df["spray_deg"].to_numpy()
     )
     df["wind_along_mph"] = np.where(closed, 0.0, along)
+
+    # Season-level running, fielding, and park context (Savant leaderboards).
+    from . import context as ctx
+
+    df = ctx.attach_context(df)
 
     df.to_parquet(C.ENRICHED_PARQUET, index=False)
     matched = df["air_density"].notna().mean()
